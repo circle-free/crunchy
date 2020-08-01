@@ -1385,6 +1385,26 @@
   resolved "https://registry.yarnpkg.com/@sheerun/mutationobserver-shim/-/mutationobserver-shim-0.3.3.tgz#5405ee8e444ed212db44e79351f0c70a582aae25"
   integrity sha512-DetpxZw1fzPD5xUBrIAoplLChO2VB8DlL5Gg+I1IR9b2wPqYIca2WSUxL5g1vLeR4MsQq1NeWriXAVffV+U1Fw==
 
+"@svg-drawing/animation@4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@svg-drawing/animation/-/animation-4.0.0.tgz#a1a1a74aed0b327287f5423dd4ccee0bc8f5219b"
+  integrity sha512-k3uzWAvjVDuJ/4ztHcWxBacO4g11GlZ0DyHxGDM0JdpP/SkE9nIAjpwUwqIkRvj29sU+r0/+j0kLsj223HCuEw==
+  optionalDependencies:
+    "@svg-drawing/core" "4.0.0"
+
+"@svg-drawing/core@4.0.0", "@svg-drawing/core@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@svg-drawing/core/-/core-4.0.0.tgz#cc84d6a0aad78f76f3900d07d0d1883b53a79489"
+  integrity sha512-OIU1NWjv/A4jZ8l0XPssnJzrM6g7fz+W6eic6Ob8ZVdqQ6NDW9zvsToIDKwJnMQgn0ATCrxziDPLhnx5prIObA==
+
+"@svg-drawing/react@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@svg-drawing/react/-/react-4.0.0.tgz#342048262c0c6f5a4852cc6bd20626b589fc9dfa"
+  integrity sha512-0DaiAfStbdJlvdM0TVvp/UELI+a5l1niIN658HtvM/UFphYP9IUAFd0HF+xSrDGG0XybMK5lLkCDqe7G+qwIUw==
+  optionalDependencies:
+    "@svg-drawing/animation" "4.0.0"
+    "@svg-drawing/core" "4.0.0"
+
 "@svgr/babel-plugin-add-jsx-attribute@^4.2.0":
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/@svgr/babel-plugin-add-jsx-attribute/-/babel-plugin-add-jsx-attribute-4.2.0.tgz#dadcb6218503532d6884b210e7f3c502caaa44b1"
@@ -10098,11 +10118,6 @@ supports-color@^7.0.0, supports-color@^7.1.0:
   integrity sha512-oRSIpR8pxT1Wr2FquTNnGet79b3BWljqOuoW/h4oBhxJ/HUbX5nX6JSruTkvXDCFMwDPvsaTTbvMLKZWSy0R5g==
   dependencies:
     has-flag "^4.0.0"
-
-svg-drawing@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/svg-drawing/-/svg-drawing-3.0.0.tgz#9cae226b9b118b53d27b6c0bcb8c9867e2b08cdd"
-  integrity sha512-UvGIol1eFlftDLaIu2P4ZVK/5sSITHyV0bn7l/4AVXO52SYf90hxEF2lMFla0jwDIipf7Cl0MO1YU1Z2ebi8jQ==
 
 svg-parser@^2.0.0:
   version "2.0.4"
