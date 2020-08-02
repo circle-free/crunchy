@@ -262,15 +262,12 @@ function App({ createLibp2p }) {
     [draw],
   );
 
-  const handlePublish = useCallback(
-    () => {
-      draw.getDrawnPaths().map(path => {
-        // TODO: maybe some validation here
-        sendMessage(path.outerHTML);
-      });
-    },
-    [draw],
-  );
+  const handlePublish = useCallback(() => {
+    draw.getDrawnPaths().map(path => {
+      // TODO: maybe some validation here
+      sendMessage(path.outerHTML);
+    });
+  }, [draw]);
 
   const handleToggleSync = useCallback(() => {
     if (!autoSync) handlePublish();
@@ -309,7 +306,9 @@ function App({ createLibp2p }) {
           </IconButton>
           {/* <Button color="secondary" size="small" onClick={handleDownload('png')}>PNG</Button> */}
           {/* <Button color="secondary" size="small" onClick={handleDownload('svg')}>SVG</Button> */}
-          <IconButton color="secondary" onClick={handleToggleSync}>{autoSync ? <SyncIcon /> : <PublishIcon />}</IconButton>
+          <IconButton color="secondary" onClick={handleToggleSync}>
+            {autoSync ? <SyncIcon /> : <PublishIcon />}
+          </IconButton>
         </div>
 
         <div className="slider-holder">

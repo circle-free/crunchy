@@ -50,12 +50,12 @@ class Chat {
     this.userHandles = new Map([[libp2p.peerId.toB58String(), 'Me']]);
 
     this.connectedPeers = new Set();
-    this.libp2p.connectionManager.on('peer:connect', (connection) => {
+    this.libp2p.connectionManager.on('peer:connect', connection => {
       if (this.connectedPeers.has(connection.remotePeer.toB58String())) return;
       this.connectedPeers.add(connection.remotePeer.toB58String());
       this.sendStats(Array.from(this.connectedPeers));
     });
-    this.libp2p.connectionManager.on('peer:disconnect', (connection) => {
+    this.libp2p.connectionManager.on('peer:disconnect', connection => {
       if (this.connectedPeers.delete(connection.remotePeer.toB58String())) {
         this.sendStats(Array.from(this.connectedPeers));
       }
@@ -85,7 +85,7 @@ class Chat {
    * @private
    */
   join() {
-    this.libp2p.pubsub.subscribe(this.topic, (message) => {
+    this.libp2p.pubsub.subscribe(this.topic, message => {
       try {
         const request = Request.decode(message.data);
 

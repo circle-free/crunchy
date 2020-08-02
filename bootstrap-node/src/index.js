@@ -52,11 +52,11 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
   libp2p.handle(ChatProtocol.PROTOCOL, ChatProtocol.handler);
 
   // Set up our input handler
-  process.stdin.on('data', (message) => {
+  process.stdin.on('data', message => {
     // remove the newline
     message = message.slice(0, -1);
     // Iterate over all peers, and send messages to peers we are connected to
-    libp2p.peerStore.peers.forEach(async (peerData) => {
+    libp2p.peerStore.peers.forEach(async peerData => {
       // If they dont support the chat protocol, ignore
       if (!peerData.protocols.includes(ChatProtocol.PROTOCOL)) return;
 
@@ -76,7 +76,7 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
   // Start the node
   await libp2p.start();
   console.log('Node started with addresses:');
-  libp2p.transportManager.getAddrs().forEach((ma) => console.log(ma.toString()));
+  libp2p.transportManager.getAddrs().forEach(ma => console.log(ma.toString()));
   console.log('\nNode supports protocols:');
   libp2p.upgrader.protocols.forEach((_, p) => console.log(p));
 
@@ -93,7 +93,7 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
   });
 
   // Set up our input handler
-  process.stdin.on('data', async (message) => {
+  process.stdin.on('data', async message => {
     // Remove trailing newline
     message = message.slice(0, -1);
     // If there was a command, exit early
