@@ -8,6 +8,7 @@ const { Request, Stats } = protons(`
       SEND_MESSAGE = 0;
       UPDATE_PEER = 1;
       STATS = 2;
+      SYNC = 3;
     }
 
     required Type type = 1;
