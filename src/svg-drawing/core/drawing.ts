@@ -153,13 +153,6 @@ export class SvgDrawing extends Renderer {
     if (!this._drawPath) return;
 
     const po: [number, number] = [x - this.left, y - this.top];
-
-    // TODO: do this once the path is done maybe
-    // if (this.integers) {
-    //   po[0] = Math.floor(po[0]);
-    //   po[1] = Math.floor(po[1]);
-    // }
-
     this._addDrawPoint(po);
 
     if (
