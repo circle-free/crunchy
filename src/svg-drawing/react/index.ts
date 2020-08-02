@@ -1,1 +1,1 @@
-export * from './useDrawing'
+export * from './useDrawing';

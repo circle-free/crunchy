@@ -19,12 +19,12 @@ import KadDHT from 'libp2p-kad-dht';
 // Gossipsub
 import Gossipsub from 'libp2p-gossipsub';
 
-const createLibp2p = async (peerId) => {
+const createLibp2p = async peerId => {
   // Create the Node
   const libp2p = await Libp2p.create({
     peerId,
     addresses: {
-      listen: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star']
+      listen: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star'],
     },
     modules: {
       transport: [Websockets, WebrtcStar],
@@ -32,27 +32,27 @@ const createLibp2p = async (peerId) => {
       connEncryption: [NOISE, Secio],
       peerDiscovery: [Bootstrap],
       dht: KadDHT,
-      pubsub: Gossipsub
+      pubsub: Gossipsub,
     },
     config: {
       peerDiscovery: {
         bootstrap: {
-          list: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star/p2p/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7']
-        }
+          list: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star/p2p/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7'],
+        },
       },
       dht: {
         enabled: true,
         randomWalk: {
-          enabled: true
-        }
-      }
-    }
+          enabled: true,
+        },
+      },
+    },
   });
 
   // Automatically start libp2p
   await libp2p.start();
 
   return libp2p;
-}
+};
 
 export default createLibp2p;

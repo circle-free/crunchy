@@ -31,7 +31,7 @@ const colorList = [
 
 const getRandomInt = max => Math.floor(Math.random() * Math.floor(max));
 
-const getRandomColor = () => `#${Array.from({ length: 3 }, () => String(getRandomInt(255).toString(16)).padStart(2, '0')  ).join('')}`;
+const getRandomColor = () => `#${Array.from({ length: 3 }, () => String(getRandomInt(255).toString(16)).padStart(2, '0')).join('')}`;
 
 const CANVAS_SIZE = window.innerHeight > window.innerWidth ? '98vw' : '49vw';
 
@@ -94,7 +94,7 @@ const drawingAnimation = (paths, count) => {
   }
 
   return update;
-}
+};
 
 const lattice = s => `
   repeating-linear-gradient(
@@ -118,8 +118,7 @@ function App() {
   const drawingRef = useRef(null);
   const aniDivRef = useRef(null);
   const animationRef = useRef(null);
-  
- 
+
   // const [thinner, switchThinner] = useState(true);
   const [rainbowPen, switchRainbowPen] = useState(false);
   const [curve, switchCurve] = useState(true);
@@ -130,12 +129,13 @@ function App() {
   const [animMs, setAnimMs] = useState(20);
   const [penWidth, setPenWidth] = useState(5);
 
-  const clickDownload = useCallback(extension => e => {
+  const clickDownload = useCallback(
+    extension => e => {
       if (!drawingRef.current) return;
 
       drawingRef.current.download(extension);
     },
-    []
+    [],
   );
 
   // const pressureChange = useCallback(
@@ -215,16 +215,18 @@ function App() {
     setPenColor(color);
   }, []);
 
-  const handleChangePenColor = useCallback(e => {
-      updatePenColor(e.target.value)
+  const handleChangePenColor = useCallback(
+    e => {
+      updatePenColor(e.target.value);
     },
-    [updatePenColor]
+    [updatePenColor],
   );
 
-  const handleClickPenColor = useCallback(col => () => {
-      updatePenColor(col)
+  const handleClickPenColor = useCallback(
+    col => () => {
+      updatePenColor(col);
     },
-    [updatePenColor]
+    [updatePenColor],
   );
 
   const updateFill = useCallback(color => {
@@ -234,16 +236,18 @@ function App() {
     setFill(color);
   }, []);
 
-  const handleChangeFill = useCallback(e => {
-      updateFill(e.target.value)
+  const handleChangeFill = useCallback(
+    e => {
+      updateFill(e.target.value);
     },
-    [updateFill]
+    [updateFill],
   );
 
-  const handleClickFill = useCallback(col => () => {
-      updateFill(col)
+  const handleClickFill = useCallback(
+    col => () => {
+      updateFill(col);
     },
-    [updateFill]
+    [updateFill],
   );
 
   const clickClear = useCallback(() => {
@@ -277,7 +281,7 @@ function App() {
 
     const drawingOptions = { curve, close, delay, penWidth, fill };
     drawingRef.current = new SvgDrawing(divRef.current, drawingOptions);
-  })
+  });
 
   useEffect(() => {
     if (animationRef.current) return;
@@ -396,31 +400,59 @@ function App() {
 
           {/* TODO: fix <label> <input type="checkbox" checked={thinner} onChange={handleChangeThinner} /> Thinner </label> */}
 
-          <label> Curve <input type="checkbox" checked={curve} onChange={handleChangeCurve} /> </label>
+          <label>
+            {' '}
+            Curve <input type="checkbox" checked={curve} onChange={handleChangeCurve} />{' '}
+          </label>
 
-          {!rainbowPen && (<label> Close <input type="checkbox" checked={close} onChange={handleChangeClose} /> </label>)}
+          {!rainbowPen && (
+            <label>
+              {' '}
+              Close <input type="checkbox" checked={close} onChange={handleChangeClose} />{' '}
+            </label>
+          )}
         </fieldset>
 
         <fieldset>
           <h3>COLOR</h3>
 
-          <label> Rainbow pen <input type="checkbox" checked={rainbowPen} onChange={handleChangeRainbowPen} /> </label>
+          <label>
+            {' '}
+            Rainbow pen <input type="checkbox" checked={rainbowPen} onChange={handleChangeRainbowPen} />{' '}
+          </label>
 
           {!rainbowPen && (
             <>
-              <div> FILL: <input type="text" placeholder="#000 or black or rgba(0,0,0,1)" value={fill} onChange={handleChangeFill} /> </div>
+              <div>
+                {' '}
+                FILL: <input type="text" placeholder="#000 or black or rgba(0,0,0,1)" value={fill} onChange={handleChangeFill} />{' '}
+              </div>
 
               <div>
                 {colorList.map(col => (
-                  <div className="color-elem" key={col} style={{ backgroundColor: col, border: col === fill ? '2px solid #000' : '2px solid #999' }} onClick={handleClickFill(col)} />
+                  <div
+                    className="color-elem"
+                    key={col}
+                    style={{ backgroundColor: col, border: col === fill ? '2px solid #000' : '2px solid #999' }}
+                    onClick={handleClickFill(col)}
+                  />
                 ))}
               </div>
 
-              <div> PEN COLOR: <input type="text" placeholder="#000 or black or rgba(0,0,0,1)" value={penColor} onChange={handleChangePenColor} /> </div>
+              <div>
+                {' '}
+                PEN COLOR:{' '}
+                <input type="text" placeholder="#000 or black or rgba(0,0,0,1)" value={penColor} onChange={handleChangePenColor} />{' '}
+              </div>
 
               <div>
                 {colorList.map(col => (
-                  <div className="color-elem" key={col} style={{ backgroundColor: col, border: col === penColor ? '2px solid #000' : '2px solid #999' }} onClick={handleClickPenColor(col)} />
+                  <div
+                    className="color-elem"
+                    key={col}
+                    style={{ backgroundColor: col, border: col === penColor ? '2px solid #000' : '2px solid #999' }}
+                    onClick={handleClickPenColor(col)}
+                  />
                 ))}
               </div>
             </>
@@ -449,7 +481,17 @@ function App() {
             <button onClick={clickDownload('svg')}>Download SVG</button>
           </fieldset>
 
-          <div ref={divRef} style={{ backgroundImage: lattice(size), backgroundSize: `${size}px ${size}px`, border: '1px solid #333', width: CANVAS_SIZE, height: CANVAS_SIZE, margin: 'auto' }} />
+          <div
+            ref={divRef}
+            style={{
+              backgroundImage: lattice(size),
+              backgroundSize: `${size}px ${size}px`,
+              border: '1px solid #333',
+              width: CANVAS_SIZE,
+              height: CANVAS_SIZE,
+              margin: 'auto',
+            }}
+          />
         </div>
 
         <div>
@@ -470,11 +512,20 @@ function App() {
             </div>
           </fieldset>
 
-          <div ref={aniDivRef} style={{ backgroundSize: `${size}px ${size}px`, border: '1px solid #333', width: CANVAS_SIZE, height: CANVAS_SIZE, margin: 'auto' }} />
+          <div
+            ref={aniDivRef}
+            style={{
+              backgroundSize: `${size}px ${size}px`,
+              border: '1px solid #333',
+              width: CANVAS_SIZE,
+              height: CANVAS_SIZE,
+              margin: 'auto',
+            }}
+          />
         </div>
       </div>
     </Fragment>
-  )
+  );
 }
 
 export default App;

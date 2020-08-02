@@ -51,7 +51,7 @@ class Chat extends EventEmitter {
     this.connectedPeers = new Set();
     this.stats = new Map();
 
-    this.libp2p.connectionManager.on('peer:connect', (connection) => {
+    this.libp2p.connectionManager.on('peer:connect', connection => {
       console.log('Connected to', connection.remotePeer.toB58String());
 
       if (this.connectedPeers.has(connection.remotePeer.toB58String())) return;
@@ -60,7 +60,7 @@ class Chat extends EventEmitter {
       this.sendStats(Array.from(this.connectedPeers));
     });
 
-    this.libp2p.connectionManager.on('peer:disconnect', (connection) => {
+    this.libp2p.connectionManager.on('peer:disconnect', connection => {
       console.log('Disconnected from', connection.remotePeer.toB58String());
 
       if (this.connectedPeers.delete(connection.remotePeer.toB58String())) {
@@ -78,7 +78,7 @@ class Chat extends EventEmitter {
    * @private
    */
   join() {
-    this.libp2p.pubsub.subscribe(this.topic, (message) => {
+    this.libp2p.pubsub.subscribe(this.topic, message => {
       try {
         const request = Request.decode(message.data);
 
