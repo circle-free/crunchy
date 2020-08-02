@@ -2,24 +2,31 @@
 
 // Libp2p Core
 const Libp2p = require('libp2p');
+
 // Transports
 const TCP = require('libp2p-tcp');
 const Websockets = require('libp2p-websockets');
 const WebrtcStar = require('libp2p-webrtc-star');
+
 // wrtc for node to supplement WebrtcStar
 const wrtc = require('wrtc');
+
 // Signaling Server for webrtc
 const SignalingServer = require('libp2p-webrtc-star/src/sig-server');
 
 // Stream Multiplexers
 const Mplex = require('libp2p-mplex');
+
 // Encryption
 const { NOISE } = require('libp2p-noise');
 const Secio = require('libp2p-secio');
+
 // Discovery
 const MDNS = require('libp2p-mdns');
+
 // DHT
 const KademliaDHT = require('libp2p-kad-dht');
+
 // PubSub
 const Gossipsub = require('libp2p-gossipsub');
 
@@ -55,9 +62,10 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
   process.stdin.on('data', message => {
     // remove the newline
     message = message.slice(0, -1);
+
     // Iterate over all peers, and send messages to peers we are connected to
     libp2p.peerStore.peers.forEach(async peerData => {
-      // If they dont support the chat protocol, ignore
+      // If they don't support the chat protocol, ignore
       if (!peerData.protocols.includes(ChatProtocol.PROTOCOL)) return;
 
       // If we're not connected, ignore
@@ -89,7 +97,9 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
       user = pubsubChat.userHandles.get(from);
     }
 
-    console.info(`${fromMe ? PubsubChat.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}): ${message.data}`);
+    console.info(
+      `${fromMe ? PubsubChat.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}) (${message.id}): ${message.data}`,
+    );
   });
 
   // Set up our input handler
@@ -101,7 +111,7 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
 
     try {
       // Publish the message
-      await pubsubChat.send(message);
+      await pubsubChat.sendPath(message);
     } catch (err) {
       console.error('Could not publish chat', err);
     }
