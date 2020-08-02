@@ -28,7 +28,7 @@ async function handler({ connection, stream }) {
   try {
     await pipe(
       stream,
-      (source) =>
+      source =>
         (async function* () {
           for await (const message of source) {
             console.info(`${connection.remotePeer.toB58String().slice(0, 8)}: ${String(message)}`);
