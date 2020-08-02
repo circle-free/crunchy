@@ -29,7 +29,7 @@ async function handler({ connection, stream }) {
     await pipe(
       stream,
       source =>
-        (async function* () {
+        (async function*() {
           for await (const message of source) {
             console.info(`${connection.remotePeer.toB58String().slice(0, 8)}: ${String(message)}`);
 
@@ -53,11 +53,15 @@ async function handler({ connection, stream }) {
  */
 async function send(message, stream) {
   try {
-    await pipe([message], stream, async function (source) {
-      for await (const message of source) {
-        console.info(String(message));
-      }
-    });
+    await pipe(
+      [message],
+      stream,
+      async function(source) {
+        for await (const message of source) {
+          console.info(String(message));
+        }
+      },
+    );
   } catch (err) {
     console.error(err);
   }
