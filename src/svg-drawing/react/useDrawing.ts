@@ -18,6 +18,7 @@ interface UseSvgDrawing {
   on: () => void;
   off: () => void;
   onPathDrawn: (callback : Function) => any;
+  offPathDrawn: (listener : Function) => any;
 }
 
 export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObject<HTMLDivElement | null>, UseSvgDrawing] => {
@@ -114,6 +115,12 @@ export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObjec
     return drawingRef.current.onPathDrawn(callback);
   }, []);
 
+  const offPathDrawn = useCallback((listener) => {
+    if (!drawingRef.current) return;
+
+    return drawingRef.current.offPathDrawn(listener);
+  }, []);
+
   useEffect(() => {
     if (drawingRef.current) return;
 
@@ -143,6 +150,7 @@ export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObjec
       off,
       on,
       onPathDrawn,
+      offPathDrawn,
     },
   ];
 }

@@ -194,6 +194,10 @@ export class SvgDrawing extends Renderer {
     return this.eventEmitter.on('pathDrawn', callback);
   }
 
+  public offPathDrawn(listener: Function): any {
+    return this.eventEmitter.off('pathDrawn', listener);
+  }
+
   private _addDrawPoint(po: [number, number]) {
     if (!this._drawPath) return;
 

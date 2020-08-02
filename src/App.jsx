@@ -97,8 +97,15 @@ function App({ createLibp2p }) {
   useEffect(() => {
     if (!draw) return;
 
-    if (!pathDrawnListener && chatClient) {
-      setPathDrawnListener(draw.onPathDrawn(path => sendMessage(path.outerHTML)));
+    if (pathDrawnListener && !autoSync) {
+      draw.offPathDrawn(pathDrawnListener);
+      setPathDrawnListener(null);
+    }
+
+    if (!pathDrawnListener && chatClient && autoSync) {
+      const callback = path => sendMessage(path.outerHTML);
+      draw.onPathDrawn(callback);
+      setPathDrawnListener(() => callback);
     }
   }, [draw, pathDrawnListener, chatClient]);
 
@@ -256,7 +263,7 @@ function App({ createLibp2p }) {
   );
 
   const handlePublish = useCallback(
-    color => {
+    () => {
       draw.getDrawnPaths().map(path => {
         // TODO: maybe some validation here
         sendMessage(path.outerHTML);
@@ -265,17 +272,11 @@ function App({ createLibp2p }) {
     [draw],
   );
 
-  const syncDrawnPaths = () => {
-    // setSyncing(true);
-    // getLastPath();
-    // setSyncing(false);
-  };
-
   const handleToggleSync = useCallback(() => {
-    setAutoSync(!autoSync);
+    if (!autoSync) handlePublish();
 
-    if (!autoSync) syncDrawnPaths();
-  }, [autoSync]);
+    setAutoSync(!autoSync);
+  }, [autoSync, handlePublish]);
   // Draw logic end
 
   return (
@@ -294,9 +295,9 @@ function App({ createLibp2p }) {
           <IconButton color="secondary" onClick={handleUndo}>
             <UndoIcon />
           </IconButton>
-          <IconButton color="secondary" onClick={handlePublish}>
+          {/* <IconButton color="secondary" onClick={handlePublish}>
             <PublishIcon />
-          </IconButton>
+          </IconButton> */}
           <IconButton color="secondary" onClick={handleToggleSmoothing}>
             {smoothing ? <GestureIcon /> : <ShowChartIcon />}
           </IconButton>
@@ -308,7 +309,7 @@ function App({ createLibp2p }) {
           </IconButton>
           {/* <Button color="secondary" size="small" onClick={handleDownload('png')}>PNG</Button> */}
           {/* <Button color="secondary" size="small" onClick={handleDownload('svg')}>SVG</Button> */}
-          {/* <IconButton color="secondary" onClick={handleToggleSync}>{autoSync ? <SyncIcon /> : <SyncDisabledIcon />}</IconButton> */}
+          <IconButton color="secondary" onClick={handleToggleSync}>{autoSync ? <SyncIcon /> : <PublishIcon />}</IconButton>
         </div>
 
         <div className="slider-holder">
