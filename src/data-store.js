@@ -1,13 +1,12 @@
-const { MemoryDatastore } = require('interface-datastore');
 const { Adapter } = require('interface-datastore');
 const localforage = require('localforage');
 
 class LocalForageDatastore extends Adapter {
-  constructor() {
+  constructor(name) {
     super();
 
     this.store = localforage.createInstance({
-      name: 'messageStore',
+      name,
     });
   }
 
@@ -35,12 +34,8 @@ class LocalForageDatastore extends Adapter {
     return this.store.removeItem(key.toString());
   }
 
-  async _all() {
-    return this.store.keys().then(keys => Promise.all(keys.map(key => this.get(key))));
-  }
-
   async all() {
-    return this._all();
+    return this.store.keys().then(keys => Promise.all(keys.map(key => this.get(key))));
   }
 }
 
