@@ -1,5 +1,5 @@
 import React, { Fragment, useCallback, useState } from 'react';
-import { useSvgDrawing } from '@svg-drawing/react';
+import { useSvgDrawing } from './svg-drawing/react';
 import { ChromePicker } from 'react-color';
 import { Slider, Button, IconButton } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
@@ -66,7 +66,6 @@ function App() {
     curve: DEFAULT_PEN_SMOOTHING, // Use curve command for path. Default is true.
     delay: DEFAULT_PEN_SAMPLE_RATE, // Set how many ms to draw points every.
     fill: DEFAULT_PEN_FILL, // Set fill attribute for path. default is `none`
-    integers: DEFAULT_INTEGERS,
   });
 
   const handleToggleGrid = useCallback(() => {
