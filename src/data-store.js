@@ -38,6 +38,10 @@ class LocalForageDatastore extends Adapter {
   async _all() {
     return this.store.keys().then(keys => Promise.all(keys.map(key => this.get(key))));
   }
+
+  async all() {
+    return this._all();
+  }
 }
 
 module.exports = LocalForageDatastore;
