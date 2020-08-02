@@ -30,20 +30,13 @@ const PubsubChat = require('./chat');
 // Chat protocol
 const ChatProtocol = require('./chat-protocol');
 
-const {
-  SIGNALING_SERVER_PORT = 15555,
-  TCP_PORT = 63785,
-  WS_PORT = 63786,
-} = process.env;
+const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = process.env;
 
 (async () => {
   const peerId = await PeerId.createFromJSON(idJSON);
 
   // Wildcard listen on TCP and Websocket
-  const addrs = [
-    `/ip4/0.0.0.0/tcp/${TCP_PORT}`,
-    `/ip4/0.0.0.0/tcp/${WS_PORT}/ws`,
-  ];
+  const addrs = [`/ip4/0.0.0.0/tcp/${TCP_PORT}`, `/ip4/0.0.0.0/tcp/${WS_PORT}/ws`];
 
   const signalingServer = await SignalingServer.start({
     port: SIGNALING_SERVER_PORT,
@@ -75,10 +68,7 @@ const {
         const { stream } = await connection.newStream([ChatProtocol.PROTOCOL]);
         await ChatProtocol.send(message, stream);
       } catch (err) {
-        console.error(
-          'Could not negotiate chat protocol stream with peer',
-          err,
-        );
+        console.error('Could not negotiate chat protocol stream with peer', err);
       }
     });
   });
@@ -86,31 +76,21 @@ const {
   // Start the node
   await libp2p.start();
   console.log('Node started with addresses:');
-  libp2p.transportManager
-    .getAddrs()
-    .forEach((ma) => console.log(ma.toString()));
+  libp2p.transportManager.getAddrs().forEach((ma) => console.log(ma.toString()));
   console.log('\nNode supports protocols:');
   libp2p.upgrader.protocols.forEach((_, p) => console.log(p));
 
   // Create the Pubsub based chat extension
-  const pubsubChat = new PubsubChat(
-    libp2p,
-    PubsubChat.TOPIC,
-    ({ from, message }) => {
-      const fromMe = from === libp2p.peerId.toB58String();
-      let user = from.substring(0, 6);
+  const pubsubChat = new PubsubChat(libp2p, PubsubChat.TOPIC, ({ from, message }) => {
+    const fromMe = from === libp2p.peerId.toB58String();
+    let user = from.substring(0, 6);
 
-      if (pubsubChat.userHandles.has(from)) {
-        user = pubsubChat.userHandles.get(from);
-      }
+    if (pubsubChat.userHandles.has(from)) {
+      user = pubsubChat.userHandles.get(from);
+    }
 
-      console.info(
-        `${fromMe ? PubsubChat.CLEARLINE : ''}${user}(${new Date(
-          message.created,
-        ).toLocaleTimeString()}): ${message.data}`,
-      );
-    },
-  );
+    console.info(`${fromMe ? PubsubChat.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}): ${message.data}`);
+  });
 
   // Set up our input handler
   process.stdin.on('data', async (message) => {
