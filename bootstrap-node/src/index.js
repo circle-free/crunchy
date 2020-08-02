@@ -21,7 +21,16 @@ const KademliaDHT = require('libp2p-kad-dht');
 const PeerId = require('peer-id');
 
 const runSignalingServer = require('./run-signaling-server');
-const id = require('./id.json');
+const id = require('../id.json');
+
+const stop = () => {
+  console.log('Received signal to shut down...');
+
+  process.exit(0);
+};
+
+process.on('SIGINT', stop);
+process.on('SIGTERM', stop);
 
 Promise.all([
   runSignalingServer(SIGNALING_SERVER_PORT),
