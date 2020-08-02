@@ -5,10 +5,15 @@ const pipe = require('it-pipe');
 const dataStore = require('./data-store');
 const { Request } = require('./proto');
 
-const onMessageGeneratorWith = source =>
-  (async function*() {
-    for await (const message of source) {
-      const svgPaths = [];
+const onSyncReqGeneratorWith = source =>
+  (async function* () {
+    for await (const { data } of source) {
+      const { type } = Request.decode(data);
+
+      if (type !== Request.Type.SYNC) return;
+
+      const raws = await dataStore.all().then(messages.map(message => Request.encode(message)));
+      for (const raw of raws) yield raw;
     }
   })();
 
@@ -18,11 +23,19 @@ module.exports = {
   },
 
   handle({ connection, stream }) {
-    //TODO
-    // return pipe(stream, onMessageGeneratorWith).catch(console.error);
+    const peerShortId = connection.remotePeer.toB58String().slice(0, 8);
+    console.info(`Received direct message from peer ${peerShortId}`);
+
+    return pipe(stream, onSyncReqGeneratorWith, stream).catch(console.error);
   },
 
-  send({ message, stream }) {
-    //TODO
+  send({ message, stream, cb }) {
+    const raw = Request.encode(message);
+
+    return pipe([raw], stream, async source => {
+      for await (const { data } of source) {
+        cb(Request.decode(data));
+      }
+    }).catch(console.error);
   },
 };
