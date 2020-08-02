@@ -37,7 +37,7 @@ const createLibp2p = async (peerId) => {
     config: {
       peerDiscovery: {
         bootstrap: {
-          list: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star/p2p/QmWjz6xb8v9K4KnYEwP5Yk75k5mMBCehzWFLCvvQpYxF3d']
+          list: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star/p2p/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7']
         }
       },
       dht: {

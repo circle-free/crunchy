@@ -3,10 +3,10 @@ services:
   bootstrap-node:
     build: ./
     environment:
-      TCP_PORT: 9091
-      WS_PORT: 9092
-      SIGNALING_SERVER_PORT: 13579
+      TCP_PORT: 63785
+      WS_PORT: 63786
+      SIGNALING_SERVER_PORT: 15555
     ports:
-      - 9091:9091
-      - 9092:9092
-      - 13579:13579
+      - 63785:63785
+      - 63786:63786
+      - 15555:15555

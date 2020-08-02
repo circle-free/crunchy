@@ -181,7 +181,7 @@ export class Path {
     pathString.split(' ').forEach((attr) => {
       const [key, value] = attr.split('=')
 
-      if (['fill', 'stroke', 'stroke-width', 'id'].includes(key)) {
+      if (['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'id'].includes(key)) {
         path.attrs[key] = value.split('">')[0].substring(1, value.length - 1)
       }
     })
