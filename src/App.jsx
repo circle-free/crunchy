@@ -76,6 +76,7 @@ function App({ createLibp2p }) {
   const [drawing, setDrawing] = useState(DEFAULT_PEN_ENABLED);
   const [autoSync, setAutoSync] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [pathDrawnListener, setPathDrawnListener] = useState(null);
 
   // LibP2P
   const [peerId, setPeerId] = useState(null);
@@ -91,6 +92,15 @@ function App({ createLibp2p }) {
   const [listening, setListening] = useState(false);
   const [peerCount, setPeerCount] = useState(0);
   const [stats, setStats] = useState(new Map());
+
+  // Draw
+  useEffect(() => {
+    if (!draw) return;
+
+    if (!pathDrawnListener && chatClient) {
+      setPathDrawnListener(draw.onPathDrawn(path => sendMessage(path.outerHTML)));
+    }
+  }, [draw, pathDrawnListener, chatClient]);
 
   // App
   useEffect(() => {
@@ -169,6 +179,8 @@ function App({ createLibp2p }) {
   // Sends the current message in the chat field
   const sendMessage = async message => {
     if (!message) return;
+
+    if (!chatClient) return;
 
     if (chatClient.checkCommand(message)) return;
 

@@ -1,17 +1,18 @@
-import { Renderer, RendererOption } from './renderer'
-import { Path, Point, Command, COMMAND_TYPE } from './svg'
-import { BezierCurve } from './bezier'
-import { throttle } from './throttle'
-import { getPassiveOptions } from './shared/getPassiveOptions'
+import { Renderer, RendererOption } from './renderer';
+import { Path, Point, Command, COMMAND_TYPE } from './svg';
+import { BezierCurve } from './bezier';
+import { throttle } from './throttle';
+import { getPassiveOptions } from './shared/getPassiveOptions';
+const EventEmitter = require('events');
 
 export interface DrawingOption extends RendererOption {
-  penColor?: string
-  penWidth?: number
-  close?: boolean
-  curve?: boolean
-  delay?: number
-  fill?: string
-  integers?: boolean
+  penColor?: string;
+  penWidth?: number;
+  close?: boolean;
+  curve?: boolean;
+  delay?: number;
+  fill?: string;
+  integers?: boolean;
 }
 
 export class SvgDrawing extends Renderer {
@@ -23,6 +24,7 @@ export class SvgDrawing extends Renderer {
   public close: boolean;
   public delay: number;
   public bezier: BezierCurve;
+  private eventEmitter: any;
   private _drawPath: Path | null;
   private _drawMoveThrottle: this['drawMove'];
   private _listenerOption: ReturnType<typeof getPassiveOptions>;
@@ -44,6 +46,7 @@ export class SvgDrawing extends Renderer {
     }: DrawingOption = {}
   ) {
     super(el, { ...rendOpt })
+
     /**
      * Setup parameter
      */
@@ -70,6 +73,11 @@ export class SvgDrawing extends Renderer {
     this._handleEnd = this._handleEnd.bind(this);
     this._drawMoveThrottle = throttle(this.drawMove, this.delay);
     this.on();
+
+    /**
+     * Setup Events
+     */
+    this.eventEmitter = new EventEmitter();
   }
 
   public clear(): void {
@@ -172,8 +180,18 @@ export class SvgDrawing extends Renderer {
       this._drawPath.commands.push(new Command(COMMAND_TYPE.CLOSE));
     }
 
+    if (this._drawPath) {
+      const clonedPath = this._drawPath.clone();
+      clonedPath.attrs.class = undefined;
+      this.eventEmitter.emit('pathDrawn', clonedPath.toElement());
+    }
+
     this._drawPath = null;
     this.update();
+  }
+
+  public onPathDrawn(callback: Function): any {
+    return this.eventEmitter.on('pathDrawn', callback);
   }
 
   private _addDrawPoint(po: [number, number]) {

@@ -6,17 +6,18 @@ interface UseSvgDrawing {
   clear: () => void;
   undo: () => void;
   changePenColor: (penColor: DrawingOption['penColor']) => void;
-  changePenWidth: (penwidth: DrawingOption['penWidth']) => void;
-  changeFill: (penColor: DrawingOption['fill']) => void;
-  changeClose: (penwidth: DrawingOption['close']) => void;
-  changeDelay: (penColor: DrawingOption['delay']) => void;
-  changeCurve: (penwidth: DrawingOption['curve']) => void;
+  changePenWidth: (penWidth: DrawingOption['penWidth']) => void;
+  changeFill: (fill: DrawingOption['fill']) => void;
+  changeClose: (close: DrawingOption['close']) => void;
+  changeDelay: (delay: DrawingOption['delay']) => void;
+  changeCurve: (curve: DrawingOption['curve']) => void;
   getSvgXML: () => string | null;
   download: (ext: 'svg' | 'png' | 'jpg') => void;
   insertPath: (pathString: string) => void;
   getDrawnPaths: () => any[] | undefined;
   on: () => void;
   off: () => void;
+  onPathDrawn: (callback : Function) => any;
 }
 
 export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObject<HTMLDivElement | null>, UseSvgDrawing] => {
@@ -107,6 +108,12 @@ export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObjec
     drawingRef.current.on();
   }, []);
 
+  const onPathDrawn = useCallback((callback) => {
+    if (!drawingRef.current) return;
+
+    return drawingRef.current.onPathDrawn(callback);
+  }, []);
+
   useEffect(() => {
     if (drawingRef.current) return;
 
@@ -135,6 +142,7 @@ export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObjec
       download,
       off,
       on,
+      onPathDrawn,
     },
   ];
 }
