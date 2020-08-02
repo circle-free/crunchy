@@ -1,8 +1,7 @@
-const { Request, Stats } = require('../../src/proto');
+const Message = require('./message');
 
 class Chat {
   /**
-   *
    * @param {Libp2p} libp2p A Libp2p node to communicate through
    * @param {string} topic The topic to subscribe to
    * @param {function(Message)} messageHandler Called with every `Message` received on `topic`
@@ -14,11 +13,13 @@ class Chat {
     this.userHandles = new Map([[libp2p.peerId.toB58String(), 'Me']]);
 
     this.connectedPeers = new Set();
+
     this.libp2p.connectionManager.on('peer:connect', connection => {
       if (this.connectedPeers.has(connection.remotePeer.toB58String())) return;
       this.connectedPeers.add(connection.remotePeer.toB58String());
       this.sendStats(Array.from(this.connectedPeers));
     });
+
     this.libp2p.connectionManager.on('peer:disconnect', connection => {
       if (this.connectedPeers.delete(connection.remotePeer.toB58String())) {
         this.sendStats(Array.from(this.connectedPeers));
@@ -49,24 +50,20 @@ class Chat {
    * @private
    */
   join() {
-    this.libp2p.pubsub.subscribe(this.topic, message => {
+    this.libp2p.pubsub.subscribe(this.topic, payload => {
       try {
-        const request = Request.decode(message.data);
+        const message = Message.fromPayload(payload);
 
-        switch (request.type) {
-          case Request.Type.UPDATE_PEER:
-            const newHandle = request.updatePeer.userHandle.toString();
-            console.info(`System: ${message.from} is now ${newHandle}.`);
-            this.userHandles.set(message.from, newHandle);
-            break;
-          case Request.Type.SEND_MESSAGE:
-            this.messageHandler({
-              from: message.from,
-              message: request.sendMessage,
-            });
-            break;
-          default:
-          // Do nothing
+        if (message.type === Message.Type.PATH) {
+          this.messageHandler({ from: message.from, message: message.path });
+          return;
+        }
+
+        if (message.type === Message.Type.UPDATE_PEER) {
+          this.emit('peer:update', { from: message.from, name: message.name });
+          console.info(`System: ${message.from} is now ${message.name}.`);
+          this.userHandles.set(message.from, message.name);
+          return;
         }
       } catch (err) {
         console.error(err);
@@ -82,6 +79,7 @@ class Chat {
     this.libp2p.pubsub.unsubscribe(this.topic);
   }
 
+  // TODO: this will likely be removed or repurposed (CLI)
   /**
    * Crudely checks the input for a command. If no command is
    * found `false` is returned. If the input contains a command,
@@ -103,22 +101,16 @@ class Chat {
   }
 
   /**
-   * Sends a message over pubsub to update the user handle
-   * to the provided `name`.
+   * Informs the pubsub network of a name change.
    * @param {Buffer|string} name Username to change to
    */
   async updatePeer(name) {
-    const msg = Request.encode({
-      type: Request.Type.UPDATE_PEER,
-      updatePeer: {
-        userHandle: Buffer.from(name),
-      },
-    });
+    const { payload } = new Message(Message.Type.UPDATE_PEER, name);
 
     try {
-      await this.libp2p.pubsub.publish(this.topic, msg);
+      await this.libp2p.pubsub.publish(this.topic, payload);
     } catch (err) {
-      console.error('Could not publish name change', err);
+      console.error('Could not publish name change');
     }
   }
 
@@ -127,37 +119,28 @@ class Chat {
    * @param {Array<Buffer>} connectedPeers
    */
   async sendStats(connectedPeers) {
-    const msg = Request.encode({
-      type: Request.Type.STATS,
-      stats: {
-        connectedPeers,
-        nodeType: Stats.NodeType.NODEJS,
-      },
-    });
+    const stats = { connectedPeers, nodeType: Message.NodeType.NODEJS };
+    const { payload } = new Message(Message.Type.STATS, stats);
 
     try {
-      await this.libp2p.pubsub.publish(this.topic, msg);
+      await this.libp2p.pubsub.publish(this.topic, payload);
     } catch (err) {
-      console.error('Could not publish stats update', err);
+      console.error('Could not publish stats update');
     }
   }
 
   /**
-   * Publishes the given `message` to pubsub peers
-   * @throws
-   * @param {Buffer|string} message The chat message to send
+   * Publishes the given `path` to pubsub peers
+   * @param {object} path The path to send
    */
-  async send(message) {
-    const msg = Request.encode({
-      type: Request.Type.SEND_MESSAGE,
-      sendMessage: {
-        id: (~~(Math.random() * 1e9)).toString(36) + Date.now(),
-        data: Buffer.from(message),
-        created: Date.now(),
-      },
-    });
+  async sendPath(path) {
+    const { payload } = new Message(Message.Type.PATH, path);
 
-    await this.libp2p.pubsub.publish(this.topic, msg);
+    try {
+      await this.libp2p.pubsub.publish(this.topic, payload);
+    } catch (err) {
+      console.error('Could not publish path');
+    }
   }
 }
 
