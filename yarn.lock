@@ -6068,6 +6068,11 @@ ignore@^4.0.6:
   resolved "https://registry.yarnpkg.com/ignore/-/ignore-4.0.6.tgz#750e3db5862087b4737ebac8207ffd1ef27b25fc"
   integrity sha512-cyFDKrqc/YdcWFniJhzI42+AzS+gNwmUzOSFcRCQYwySuBBBy/KjuxWLZ/FHEH6Moq1NizMOBWyTcv8O4OZIMg==
 
+immediate@~3.0.5:
+  version "3.0.6"
+  resolved "https://registry.yarnpkg.com/immediate/-/immediate-3.0.6.tgz#9db1dbd0faf8de6fbe0f5dd5e56bb606280de69b"
+  integrity sha1-nbHb0Pr43m++D13V5Wu2BigN5ps=
+
 immer@1.10.0:
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/immer/-/immer-1.10.0.tgz#bad67605ba9c810275d91e1c2a47d4582e98286d"
@@ -6216,6 +6221,19 @@ interface-datastore@^1.0.2, interface-datastore@^1.0.4:
     it-drain "^1.0.1"
     nanoid "^3.0.2"
 
+interface-datastore@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/interface-datastore/-/interface-datastore-2.0.0.tgz#a0c2de1df9e42553e4723428c02242d9c47a2cc9"
+  integrity sha512-wOImix5uVEZWo+8zPSRMJ9nHbszZi3PhZ14KHLN7oRQjaYQtjtOpYj6n5EXTjDAfIQI8KN9vntHXxyAw1lcRIA==
+  dependencies:
+    class-is "^1.1.0"
+    err-code "^2.0.1"
+    ipfs-utils "^2.3.1"
+    iso-random-stream "^1.1.1"
+    it-all "^1.0.2"
+    it-drain "^1.0.1"
+    nanoid "^3.0.2"
+
 internal-ip@^4.3.0:
   version "4.3.0"
   resolved "https://registry.yarnpkg.com/internal-ip/-/internal-ip-4.3.0.tgz#845452baad9d2ca3b69c635a137acb9a0dad0907"
@@ -6278,7 +6296,7 @@ ipaddr.js@1.9.1, ipaddr.js@^1.9.0:
   resolved "https://registry.yarnpkg.com/ipaddr.js/-/ipaddr.js-1.9.1.tgz#bff38543eeb8984825079ff3a2a8e6cbd46781b3"
   integrity sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==
 
-ipfs-utils@^2.2.0, ipfs-utils@^2.2.2, ipfs-utils@^2.3.0:
+ipfs-utils@^2.2.0, ipfs-utils@^2.2.2, ipfs-utils@^2.3.0, ipfs-utils@^2.3.1:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/ipfs-utils/-/ipfs-utils-2.3.1.tgz#999951da4461b5901a5ad38329e247b5c14b7bd1"
   integrity sha512-Rq2iyFdqNknVtIgq8+/URt5WK94uEqTa2w22t2yrNE9CDifh5jvFaO6lBOMhsqzPkHjjJBoIqk+g5P0T2OHSow==
@@ -7944,6 +7962,13 @@ libp2p@^0.28.9:
     timeout-abort-controller "^1.0.0"
     xsalsa20 "^1.0.2"
 
+lie@3.1.1:
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/lie/-/lie-3.1.1.tgz#9a436b2cc7746ca59de7a41fa469b3efb76bd87e"
+  integrity sha1-mkNrLMd0bKWd56QfpGmz77dr2H4=
+  dependencies:
+    immediate "~3.0.5"
+
 lines-and-columns@^1.1.6:
   version "1.1.6"
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.1.6.tgz#1c00c743b433cd0a4e80758f7b64a57440d9ff00"
@@ -8004,6 +8029,13 @@ loady@~0.0.1:
   version "0.0.5"
   resolved "https://registry.yarnpkg.com/loady/-/loady-0.0.5.tgz#b17adb52d2fb7e743f107b0928ba0b591da5d881"
   integrity sha512-uxKD2HIj042/HBx77NBcmEPsD+hxCgAtjEWlYNScuUjIsh/62Uyu39GOR68TBR68v+jqDL9zfftCWoUo4y03sQ==
+
+localforage@^1.9.0:
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/localforage/-/localforage-1.9.0.tgz#f3e4d32a8300b362b4634cc4e066d9d00d2f09d1"
+  integrity sha512-rR1oyNrKulpe+VM9cYmcFn6tsHuokyVHFaCM3+osEmxaHTbEk8oQu6eGDfS6DQLWi/N67XRmB8ECG37OES368g==
+  dependencies:
+    lie "3.1.1"
 
 locate-path@^2.0.0:
   version "2.0.0"
