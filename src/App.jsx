@@ -83,8 +83,9 @@ function App({ createLibp2p }) {
   const [peerId, setPeerId] = useState(null);
   const [libp2p, setLibp2p] = useState(null);
   const [started, setStarted] = useState(false);
-  const [datastore, setDatastore] = useState(null);
-  const [datastoreLoaded, setDatastoreLoaded] = useState(false);
+  const [datastoresLoaded, setDatastoresLoaded] = useState(false);
+  const [messageDatastore, setMessageDatastore] = useState(null);
+  const [libp2pDatastore, setLibp2pDatastore] = useState(null);
   const eventBus = new EventEmitter();
 
   // Chat
@@ -112,18 +113,23 @@ function App({ createLibp2p }) {
     }
   }, [draw, pathDrawnListener, chatClient]);
 
-  // Datastore
+  // Datastores
   useEffect(() => {
-    if (datastore && !datastoreLoaded && draw) {
-      setDatastoreLoaded(true);
-      datastore._all().then(paths => paths.map(draw.insertPath));
+    if (messageDatastore && !datastoresLoaded && draw) {
+      setDatastoresLoaded(true);
+      messageDatastore.all().then(paths => paths.map(draw.insertPath));
     }
 
-    if (!datastore) {
-      console.info('Creating our datastore instance.');
-      setDatastore(new Datastore());
+    if (!messageDatastore) {
+      console.info('Creating message datastore instance.');
+      setMessageDatastore(new Datastore('messageStore'));
     }
-  }, [setDatastore, datastore, datastoreLoaded, setDatastoreLoaded, draw]);
+
+    if (!libp2pDatastore) {
+      console.info('Creating libp2p datastore instance.');
+      setLibp2pDatastore(new Datastore('libp2p'));
+    }
+  }, [setMessageDatastore, messageDatastore, datastoresLoaded, setDatastoresLoaded, libp2pDatastore, setLibp2pDatastore, draw]);
 
   // App
   useEffect(() => {
@@ -133,9 +139,9 @@ function App({ createLibp2p }) {
       return;
     }
 
-    if (!libp2p) {
+    if (!libp2p && libp2pDatastore) {
       console.info('Creating our Libp2p instance.');
-      createLibp2p(peerId).then(node => {
+      createLibp2p(peerId, libp2pDatastore).then(node => {
         setLibp2p(node);
         setStarted(true);
         console.info('Libp2p instance created.');
@@ -161,7 +167,7 @@ function App({ createLibp2p }) {
 
         // TODO: validate message
         draw.insertPath(message.data.toString());
-        datastore.put(message.id, message.data.toString());
+        messageDatastore.put(message.id, message.data.toString());
       });
 
       // Listen for peer updates
@@ -178,7 +184,7 @@ function App({ createLibp2p }) {
 
       setChatClient(pubsubChat);
     }
-  }, [libp2p, chatClient, draw, eventBus, setChatClient, datastore]);
+  }, [libp2p, chatClient, draw, eventBus, setChatClient, messageDatastore]);
 
   // Metrics
   useEffect(() => {

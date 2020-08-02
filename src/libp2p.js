@@ -19,7 +19,7 @@ import KadDHT from 'libp2p-kad-dht';
 // Gossipsub
 import Gossipsub from 'libp2p-gossipsub';
 
-const createLibp2p = async peerId => {
+const createLibp2p = async (peerId, libp2pDatastore) => {
   // Create the Node
   const libp2p = await Libp2p.create({
     peerId,
@@ -33,6 +33,11 @@ const createLibp2p = async peerId => {
       peerDiscovery: [Bootstrap],
       dht: KadDHT,
       pubsub: Gossipsub,
+    },
+    datastore: libp2pDatastore,
+    peerStore: {
+      persistence: true,
+      threshold: 1,
     },
     config: {
       peerDiscovery: {
