@@ -35,14 +35,14 @@ message Stats {
   repeated bytes connectedPeers = 1;
   optional NodeType nodeType = 2;
 }
-`)
+`);
 
 class Chat extends EventEmitter {
   /**
    * @param {Libp2p} libp2p A Libp2p node to communicate through
    * @param {string} topic The topic to subscribe to
    */
-  constructor (libp2p, topic) {
+  constructor(libp2p, topic) {
     super();
 
     this.libp2p = libp2p;
@@ -77,7 +77,7 @@ class Chat extends EventEmitter {
    * forwarded to `messageHandler`
    * @private
    */
-  join () {
+  join() {
     this.libp2p.pubsub.subscribe(this.topic, (message) => {
       try {
         const request = Request.decode(message.data);
@@ -86,7 +86,7 @@ class Chat extends EventEmitter {
           case Request.Type.UPDATE_PEER:
             this.emit('peer:update', {
               id: message.from,
-              name: request.updatePeer.userHandle.toString()
+              name: request.updatePeer.userHandle.toString(),
             });
 
             break;
@@ -95,11 +95,11 @@ class Chat extends EventEmitter {
             console.log('Incoming Stats:', message.from, request.stats);
             this.emit('stats', this.stats);
 
-            break
+            break;
           default:
             this.emit('message', {
               from: message.from,
-              ...request.sendMessage
+              ...request.sendMessage,
             });
         }
       } catch (err) {
@@ -112,7 +112,7 @@ class Chat extends EventEmitter {
    * Unsubscribes from `Chat.topic`
    * @private
    */
-  leave () {
+  leave() {
     this.libp2p.pubsub.unsubscribe(this.topic);
   }
 
@@ -123,7 +123,7 @@ class Chat extends EventEmitter {
    * @param {Buffer|string} input Text submitted by the user
    * @returns {boolean} Whether or not there was a command
    */
-  checkCommand (input) {
+  checkCommand(input) {
     const str = input.toString();
 
     if (str.startsWith('/')) {
@@ -147,12 +147,12 @@ class Chat extends EventEmitter {
    * to the provided `name`.
    * @param {Buffer|string} name Username to change to
    */
-  async updatePeer (name) {
+  async updatePeer(name) {
     const msg = Request.encode({
       type: Request.Type.UPDATE_PEER,
       updatePeer: {
-        userHandle: Buffer.from(name)
-      }
+        userHandle: Buffer.from(name),
+      },
     });
 
     try {
@@ -166,13 +166,13 @@ class Chat extends EventEmitter {
    * Sends the updated stats to the pubsub network
    * @param {Array<Buffer>} connectedPeers
    */
-  async sendStats (connectedPeers) {
+  async sendStats(connectedPeers) {
     const msg = Request.encode({
       type: Request.Type.STATS,
       stats: {
         connectedPeers,
-        nodeType: Stats.NodeType.BROWSER
-      }
+        nodeType: Stats.NodeType.BROWSER,
+      },
     });
 
     try {
@@ -186,14 +186,14 @@ class Chat extends EventEmitter {
    * Publishes the given `message` to pubsub peers
    * @param {Buffer|string} message The chat message to send
    */
-  async send (message) {
+  async send(message) {
     const msg = Request.encode({
       type: Request.Type.SEND_MESSAGE,
       sendMessage: {
         id: (~~(Math.random() * 1e9)).toString(36) + Date.now(),
         data: Buffer.from(message),
-        created: Date.now()
-      }
+        created: Date.now(),
+      },
     });
 
     await this.libp2p.pubsub.publish(this.topic, msg);
