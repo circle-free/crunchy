@@ -6,6 +6,7 @@ import { getOrCreatePeerId } from './peer-id';
 
 // Chat over Pubsub
 import PubsubChat from './chat';
+import Datastore from './data-store';
 
 import { Slider, Button, IconButton } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
@@ -82,6 +83,8 @@ function App({ createLibp2p }) {
   const [peerId, setPeerId] = useState(null);
   const [libp2p, setLibp2p] = useState(null);
   const [started, setStarted] = useState(false);
+  const [datastore, setDatastore] = useState(null);
+  const [datastoreLoaded, setDatastoreLoaded] = useState(false);
   const eventBus = new EventEmitter();
 
   // Chat
@@ -108,6 +111,19 @@ function App({ createLibp2p }) {
       setPathDrawnListener(() => callback);
     }
   }, [draw, pathDrawnListener, chatClient]);
+
+  // Datastore
+  useEffect(() => {
+    if (datastore && !datastoreLoaded && draw) {
+      setDatastoreLoaded(true);
+      datastore._all().then(paths => paths.map(draw.insertPath));
+    }
+
+    if (!datastore) {
+      console.info('Creating our datastore instance.');
+      setDatastore(new Datastore());
+    }
+  }, [setDatastore, datastore, datastoreLoaded, setDatastoreLoaded, draw]);
 
   // App
   useEffect(() => {
@@ -145,6 +161,7 @@ function App({ createLibp2p }) {
 
         // TODO: validate message
         draw.insertPath(message.data.toString());
+        datastore.put(message.id, message.data.toString());
       });
 
       // Listen for peer updates
@@ -161,7 +178,7 @@ function App({ createLibp2p }) {
 
       setChatClient(pubsubChat);
     }
-  }, [libp2p, chatClient, draw, eventBus, setChatClient]);
+  }, [libp2p, chatClient, draw, eventBus, setChatClient, datastore]);
 
   // Metrics
   useEffect(() => {
