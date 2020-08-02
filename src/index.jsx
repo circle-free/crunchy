@@ -3,10 +3,11 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
+import createLibp2p from './libp2p';
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <App createLibp2p={createLibp2p} />
   </React.StrictMode>,
   document.getElementById('root')
 );
