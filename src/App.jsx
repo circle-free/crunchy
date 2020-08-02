@@ -19,6 +19,7 @@ import BrushIcon from '@material-ui/icons/Brush';
 import PanToolIcon from '@material-ui/icons/PanTool';
 import SyncIcon from '@material-ui/icons/Sync';
 import SyncDisabledIcon from '@material-ui/icons/SyncDisabled';
+import PublishIcon from '@material-ui/icons/Publish';
 import './App.css';
 
 const size = 30;
@@ -56,6 +57,16 @@ const lattice = s => `
 `;
 
 function App({ createLibp2p }) {
+  // Draw O=object
+  const [renderRef, draw] = useSvgDrawing({
+    penWidth: DEFAULT_PEN_RADIUS, // pen width
+    penColor: DEFAULT_PEN_COLOR, // pen color
+    close: DEFAULT_PEN_CLOSE, // Use close command for path. Default is false.
+    curve: DEFAULT_PEN_SMOOTHING, // Use curve command for path. Default is true.
+    delay: DEFAULT_PEN_SAMPLE_RATE, // Set how many ms to draw points every.
+    fill: DEFAULT_PEN_FILL, // Set fill attribute for path. default is `none`
+  });
+
   // Drawing
   const [grid, setGrid] = useState(DEFAULT_CANVAS_GRID);
   const [radius, setRadius] = useState(DEFAULT_PEN_RADIUS);
@@ -73,8 +84,6 @@ function App({ createLibp2p }) {
   const eventBus = new EventEmitter();
 
   // Chat
-  const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState([])
   const [chatClient, setChatClient] = useState(null)
   const [peers, setPeers] = useState({})
 
@@ -115,7 +124,10 @@ function App({ createLibp2p }) {
           message.isMine = true;
         }
 
-        setMessages((messages) => [...messages, message]);
+        console.log(`Received path ${message.from}${message.isMine ? ' (self)' : ''} created at ${message.created}.`);
+        
+        // TODO: validate message
+        draw.insertPath(message.data.toString());
       });
 
       // Listen for peer updates
@@ -132,7 +144,7 @@ function App({ createLibp2p }) {
 
       setChatClient(pubsubChat);
     }
-  }, [libp2p, chatClient, eventBus, setChatClient]);
+  }, [libp2p, chatClient, draw, eventBus, setChatClient]);
 
   // Metrics
   useEffect(() => {
@@ -155,9 +167,7 @@ function App({ createLibp2p }) {
   }, [libp2p, listening, eventBus, setStats, setPeerCount, setListening]);
 
   // Sends the current message in the chat field
-  const sendMessage = async () => {
-    setMessage('');
-
+  const sendMessage = async (message) => {
     if (!message) return;
 
     if (chatClient.checkCommand(message)) return;
@@ -171,19 +181,7 @@ function App({ createLibp2p }) {
   }
 
   // Draw logic start
-  const [renderRef, draw] = useSvgDrawing({
-    penWidth: DEFAULT_PEN_RADIUS, // pen width
-    penColor: DEFAULT_PEN_COLOR, // pen color
-    close: DEFAULT_PEN_CLOSE, // Use close command for path. Default is false.
-    curve: DEFAULT_PEN_SMOOTHING, // Use curve command for path. Default is true.
-    delay: DEFAULT_PEN_SAMPLE_RATE, // Set how many ms to draw points every.
-    fill: DEFAULT_PEN_FILL, // Set fill attribute for path. default is `none`
-  });
-
   const handleToggleGrid = useCallback(() => {
-    console.log(draw);
-    draw.insertPath(getSvgPath());
-    console.log(draw.getDrawnPaths().map(p => p.outerHTML));
     setGrid(!grid);
   }, [draw, grid]);
 
@@ -233,6 +231,13 @@ function App({ createLibp2p }) {
     draw.download(extension);
   }, [draw]);
 
+  const handlePublish = useCallback(color => {
+    draw.getDrawnPaths().map(path => {
+      // TODO: maybe some validation here
+      sendMessage(path.outerHTML);
+    });
+  }, [draw]); 
+
   const syncDrawnPaths = () => {
     // setSyncing(true);
     // getLastPath();
@@ -256,12 +261,13 @@ function App({ createLibp2p }) {
         <div className="canvas-buttons">
           {/* <IconButton color="secondary" onClick={handleClear}><ClearIcon /></IconButton> */}
           <IconButton color="secondary" onClick={handleUndo}><UndoIcon /></IconButton>
+          <IconButton color="secondary" onClick={handlePublish}><PublishIcon /></IconButton>
           <IconButton color="secondary" onClick={handleToggleSmoothing}>{smoothing ? <GestureIcon /> : <ShowChartIcon />}</IconButton>
           <IconButton color="secondary" onClick={handleToggleGrid}>{grid ? <GridOnIcon /> : <GridOffIcon />}</IconButton>
           <IconButton color="secondary" onClick={handleToggleDraw}>{drawing ? <BrushIcon /> : <PanToolIcon />}</IconButton>
-          <Button color="secondary" size="small" onClick={handleDownload('png')}>PNG</Button>
-          <Button color="secondary" size="small" onClick={handleDownload('svg')}>SVG</Button>
-          <IconButton color="secondary" onClick={handleToggleSync}>{autoSync ? <SyncIcon /> : <SyncDisabledIcon />}</IconButton>
+          {/* <Button color="secondary" size="small" onClick={handleDownload('png')}>PNG</Button> */}
+          {/* <Button color="secondary" size="small" onClick={handleDownload('svg')}>SVG</Button> */}
+          {/* <IconButton color="secondary" onClick={handleToggleSync}>{autoSync ? <SyncIcon /> : <SyncDisabledIcon />}</IconButton> */}
         </div>
 
         <div className="slider-holder">
