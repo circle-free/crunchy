@@ -1,6 +1,5 @@
 const EventEmitter = require('events');
-
-const { Request, Stats } = require('./proto');
+const Message = require('./message');
 
 class Chat extends EventEmitter {
   /**
@@ -38,34 +37,30 @@ class Chat extends EventEmitter {
   }
 
   /**
-   * Subscribes to `Chat.topic`. All messages will be
-   * forwarded to `messageHandler`
+   * Subscribes to `Chat.topic`. All messages will emitted
    * @private
    */
   join() {
-    this.libp2p.pubsub.subscribe(this.topic, message => {
+    this.libp2p.pubsub.subscribe(this.topic, payload => {
       try {
-        const request = Request.decode(message.data);
+        const message = Message.fromPayload(payload);
 
-        switch (request.type) {
-          case Request.Type.UPDATE_PEER:
-            this.emit('peer:update', {
-              id: message.from,
-              name: request.updatePeer.userHandle.toString(),
-            });
+        if (message.type === Message.Type.PATH) {
+          this.emit('path', { from: message.from, path: message.path });
+          return;
+        }
 
-            break;
-          case Request.Type.STATS:
-            this.stats.set(message.from, request.stats);
-            console.log('Incoming Stats:', message.from, request.stats);
-            this.emit('stats', this.stats);
+        if (message.type === Message.Type.STATS) {
+          console.log('Incoming Stats:', message.from, message.stats);
+          // TODO: why this?
+          this.stats.set(message.from, message.stats);
+          this.emit('stats', this.stats);
+          return;
+        }
 
-            break;
-          default:
-            this.emit('message', {
-              from: message.from,
-              ...request.sendMessage,
-            });
+        if (message.type === Message.Type.UPDATE_PEER) {
+          this.emit('peer:update', { from: message.from, name: message.name });
+          return;
         }
       } catch (err) {
         console.error(err);
@@ -81,6 +76,7 @@ class Chat extends EventEmitter {
     this.libp2p.pubsub.unsubscribe(this.topic);
   }
 
+  // TODO: this will likely be removed
   /**
    * Crudely checks the input for a command. If no command is
    * found `false` is returned. If the input contains a command,
@@ -108,20 +104,14 @@ class Chat extends EventEmitter {
   }
 
   /**
-   * Sends a message over pubsub to update the user handle
-   * to the provided `name`.
+   * Informs the pubsub network of a name change.
    * @param {Buffer|string} name Username to change to
    */
   async updatePeer(name) {
-    const msg = Request.encode({
-      type: Request.Type.UPDATE_PEER,
-      updatePeer: {
-        userHandle: Buffer.from(name),
-      },
-    });
+    const { payload } = new Message(Message.Type.UPDATE_PEER, name);
 
     try {
-      await this.libp2p.pubsub.publish(this.topic, msg);
+      await this.libp2p.pubsub.publish(this.topic, payload);
     } catch (err) {
       console.error('Could not publish name change');
     }
@@ -132,36 +122,28 @@ class Chat extends EventEmitter {
    * @param {Array<Buffer>} connectedPeers
    */
   async sendStats(connectedPeers) {
-    const msg = Request.encode({
-      type: Request.Type.STATS,
-      stats: {
-        connectedPeers,
-        nodeType: Stats.NodeType.BROWSER,
-      },
-    });
+    const stats = { connectedPeers, nodeType: Message.NodeType.BROWSER };
+    const { payload } = new Message(Message.Type.STATS, stats);
 
     try {
-      await this.libp2p.pubsub.publish(this.topic, msg);
+      await this.libp2p.pubsub.publish(this.topic, payload);
     } catch (err) {
       console.error('Could not publish stats update');
     }
   }
 
   /**
-   * Publishes the given `message` to pubsub peers
-   * @param {Buffer|string} message The chat message to send
+   * Publishes the given `path` to pubsub peers
+   * @param {object} path The path to send
    */
-  async send(message) {
-    const msg = Request.encode({
-      type: Request.Type.SEND_MESSAGE,
-      sendMessage: {
-        id: (~~(Math.random() * 1e9)).toString(36) + Date.now(),
-        data: Buffer.from(message),
-        created: Date.now(),
-      },
-    });
+  async sendPath(path) {
+    const { payload } = new Message(Message.Type.PATH, path);
 
-    await this.libp2p.pubsub.publish(this.topic, msg);
+    try {
+      await this.libp2p.pubsub.publish(this.topic, payload);
+    } catch (err) {
+      console.error('Could not publish path');
+    }
   }
 }
 

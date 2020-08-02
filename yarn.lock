@@ -10283,6 +10283,11 @@ pressure@^2.1.2:
   resolved "https://registry.yarnpkg.com/pressure/-/pressure-2.1.2.tgz#5a7a58b7aab90f48db283012e470c1a6f9567aef"
   integrity sha512-ZSargPrrtyDGsWKFQvk3e5i/JM24pRTlb7Wu6RNtQiSzSAwdNw7hmB4+tQ/V2AhC3u4YGx3q2kMYEgtr/6ctXQ==
 
+prettier@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.0.5.tgz#d6d56282455243f2f92cc1716692c08aa31522d4"
+  integrity sha512-7PtVymN48hGcO4fGjybyBSIWDsLU4H4XlvOHfq91pz9kkGlonzwTfYkaIEwiRg/dAJF9YlbsduBAgtYLi+8cFg==
+
 pretty-bytes@^5.1.0:
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/pretty-bytes/-/pretty-bytes-5.3.0.tgz#f2849e27db79fb4d6cfe24764fc4134f165989f2"

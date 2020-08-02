@@ -106,7 +106,7 @@ function App({ createLibp2p }) {
     }
 
     if (!pathDrawnListener && chatClient && autoSync) {
-      const callback = path => sendMessage(path.outerHTML);
+      const callback = sendMessage;
       draw.onPathDrawn(callback);
       setPathDrawnListener(() => callback);
     }
@@ -151,28 +151,30 @@ function App({ createLibp2p }) {
     if (!chatClient) {
       const pubsubChat = new PubsubChat(libp2p, PubsubChat.TOPIC);
 
-      // Listen for messages
-      pubsubChat.on('message', message => {
-        if (message.from === libp2p.peerId.toB58String()) {
-          message.isMine = true;
-        }
+      // Listen for paths
+      pubsubChat.on('path', ({ from, path }) => {
+        const isMine = from === libp2p.peerId.toB58String();
+        console.log(
+          `Received path ${path.id} that ${from}${isMine ? ' (self)' : ''} created at ${new Date(path.created).toLocaleTimeString()}.`,
+        );
 
-        console.log(`Received path ${message.from}${message.isMine ? ' (self)' : ''} created at ${message.created}.`);
-
-        // TODO: validate message
-        draw.insertPath(message.data.toString());
-        datastore.put(message.id, message.data.toString());
+        // TODO: validate path here or in chat?
+        draw.insertPath(path.data);
+        datastore.put(path.id, path.data);
       });
 
       // Listen for peer updates
-      pubsubChat.on('peer:update', ({ id, name }) => {
-        setPeers(peers => {
-          const newPeers = { ...peers };
-          newPeers[id] = { name };
-          return newPeers;
-        });
+      pubsubChat.on('peer:update', ({ from, name }) => {
+        console.log(`${from} is now known as ${name}.`);
+        // TODO: consider having all the paths embed the peer name
+        // setPeers(peers => {
+        //   const newPeers = { ...peers };
+        //   newPeers[id] = { name };
+        //   return newPeers;
+        // });
       });
 
+      // TODO: consolidate stats to here
       // Forward stats events to the eventBus
       pubsubChat.on('stats', stats => eventBus.emit('stats', stats));
 
@@ -201,15 +203,11 @@ function App({ createLibp2p }) {
   }, [libp2p, listening, eventBus, setStats, setPeerCount, setListening]);
 
   // Sends the current message in the chat field
-  const sendMessage = async message => {
-    if (!message) return;
-
-    if (!chatClient) return;
-
-    if (chatClient.checkCommand(message)) return;
+  const sendMessage = async svgPath => {
+    if (!svgPath || !chatClient) return;
 
     try {
-      await chatClient.send(message);
+      await chatClient.sendPath({ id: svgPath.id, data: svgPath.outerHTML });
       console.info('Publish done');
     } catch (err) {
       console.error('Could not send message', err);
@@ -280,10 +278,7 @@ function App({ createLibp2p }) {
   );
 
   const handlePublish = useCallback(() => {
-    draw.getDrawnPaths().map(path => {
-      // TODO: maybe some validation here
-      sendMessage(path.outerHTML);
-    });
+    draw.getDrawnPaths().map(sendMessage);
   }, [draw]);
 
   const handleToggleSync = useCallback(() => {

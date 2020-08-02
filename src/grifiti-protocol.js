@@ -6,7 +6,7 @@ const dataStore = require('./data-store');
 const { Request } = require('./proto');
 
 const onMessageGeneratorWith = source =>
-  (async function*() {
+  (async function* () {
     for await (const message of source) {
       const svgPaths = [];
     }
