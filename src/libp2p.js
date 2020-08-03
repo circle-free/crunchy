@@ -2,6 +2,7 @@
 import Libp2p from 'libp2p';
 
 // Transports
+import TCP from 'libp2p-tcp';
 import Websockets from 'libp2p-websockets';
 import WebrtcStar from 'libp2p-webrtc-star';
 
@@ -19,15 +20,18 @@ import KadDHT from 'libp2p-kad-dht';
 // Gossipsub
 import Gossipsub from 'libp2p-gossipsub';
 
+import graffitiDirect from './graffiti-direct-protocol';
+import multiaddr from 'multiaddr';
+
 const createLibp2p = async (peerId, libp2pDatastore) => {
   // Create the Node
   const libp2p = await Libp2p.create({
     peerId,
     addresses: {
-      listen: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star'],
+      listen: ['/ip4/127.0.0.1/tcp/15555/ws/p2p-webrtc-star'],
     },
     modules: {
-      transport: [Websockets, WebrtcStar],
+      transport: [Websockets, TCP, WebrtcStar],
       streamMuxer: [Mplex],
       connEncryption: [NOISE, Secio],
       peerDiscovery: [Bootstrap],
@@ -42,7 +46,7 @@ const createLibp2p = async (peerId, libp2pDatastore) => {
     config: {
       peerDiscovery: {
         bootstrap: {
-          list: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star/p2p/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7'],
+          list: ['/ip4/127.0.0.1/tcp/15555/ws/p2p-webrtc-star/p2p/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7'],
         },
       },
       dht: {
@@ -61,8 +65,17 @@ const createLibp2p = async (peerId, libp2pDatastore) => {
     },
   });
 
+  libp2p.handle(graffitiDirect.protocol, graffitiDirect.handle);
+
   // Automatically start libp2p
   await libp2p.start();
+
+  // Create the multiaddr to the Bootstrap node
+  const targetAddress = multiaddr('/ip4/127.0.0.1/tcp/63786/ws/ipfs/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7');
+  // And dial it. The UI is listening for connections,
+  // so it should update if the dial is successful.
+
+  await libp2p.dial(targetAddress).catch(console.error);
 
   return libp2p;
 };

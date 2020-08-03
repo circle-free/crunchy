@@ -1,10 +1,23 @@
 'use strict';
 
 import Message, { Type, NodeType } from './message';
+import graffitiDirect from './graffiti-direct-protocol';
 
 const EventEmitter = require('events');
 
 const TOPIC = 'graffiti/gossip/1.0.0';
+
+const sendSyncReq = (libp2p, peerId) => {
+  const connection = libp2p.connectionManager.get(peerId);
+  if (!connection) return;
+
+  connection
+    .newStream([graffitiDirect.protocol])
+    .then(({ stream }) => graffitiDirect.sendSync({ stream, cb: reply => console.log(`Got reply: ${reply}`) }))
+    .catch(err => {
+      console.error('Could not negotiate graffiti direct protocol stream with peer', err);
+    });
+};
 
 class PubSub extends EventEmitter {
   /**
@@ -21,12 +34,16 @@ class PubSub extends EventEmitter {
     this.stats = new Map();
 
     this.libp2p.connectionManager.on('peer:connect', connection => {
-      console.log('Connected to', connection.remotePeer.toB58String());
+      const peerId = connection.remotePeer.toB58String();
 
-      if (this.connectedPeers.has(connection.remotePeer.toB58String())) return;
+      if (this.connectedPeers.has(peerId)) return;
 
-      this.connectedPeers.add(connection.remotePeer.toB58String());
+      console.log('Connected to', peerId);
+
+      this.connectedPeers.add(peerId);
       this.sendStats(Array.from(this.connectedPeers));
+
+      sendSyncReq(this.libp2p, peerId);
     });
 
     this.libp2p.connectionManager.on('peer:disconnect', connection => {

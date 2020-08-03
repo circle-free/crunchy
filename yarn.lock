@@ -7994,7 +7994,7 @@ libp2p-secio@^0.12.6:
     peer-id "^0.13.6"
     protons "^1.0.2"
 
-libp2p-tcp@^0.14.1, libp2p-tcp@^0.14.5:
+libp2p-tcp@^0.14.1, libp2p-tcp@^0.14.5, libp2p-tcp@^0.14.6:
   version "0.14.6"
   resolved "https://registry.yarnpkg.com/libp2p-tcp/-/libp2p-tcp-0.14.6.tgz#a0c98ebe2be2f1d3d6bf22ea8b991e51978180ac"
   integrity sha512-DeOdaH5QGVMKZflJmZq3dSWROxzD/YU1MFDxfi+DT4JVMcxfVMd+SpVEPMyk2wyA28H4AdGIRsH78yPjlFIyZQ==

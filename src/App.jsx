@@ -7,6 +7,7 @@ import getOrCreatePeerId from './peer-id';
 // Send paths over over Pubsub
 import GraffitiGossip from './graffiti-gossip-protocol';
 import Datastore from './data-store';
+import graffitiDirect from './graffiti-direct-protocol';
 
 import { Slider, Button, IconButton } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
@@ -145,10 +146,24 @@ function App({ createLibp2p }) {
       createLibp2p(peerId, libp2pDatastore).then(node => {
         setLibp2p(node);
         setStarted(true);
+
         console.info('Libp2p instance created.');
       });
     }
   }, [peerId, libp2p, createLibp2p, setPeerId]);
+
+  // Metrics
+  useEffect(() => {
+    if (!libp2p) return;
+
+    if (!listening) {
+      eventBus.on('stats', stats => {
+        setStats(stats);
+      });
+
+      setListening(true);
+    }
+  }, [libp2p, listening, eventBus, setStats, setPeerCount, setListening]);
 
   // Graffiti Gossip
   useEffect(() => {
@@ -186,26 +201,6 @@ function App({ createLibp2p }) {
       setGraffitiGossip(graffitiGossip);
     }
   }, [libp2p, graffitiGossip, draw, eventBus, setGraffitiGossip, messageDatastore]);
-
-  // Metrics
-  useEffect(() => {
-    if (!libp2p) return;
-
-    if (!listening) {
-      eventBus.on('stats', stats => {
-        setStats(stats);
-      });
-
-      libp2p.peerStore.on('peer', peerId => {
-        const num = libp2p.peerStore.peers.size;
-        setPeerCount(num);
-      });
-
-      setListening(true);
-
-      return;
-    }
-  }, [libp2p, listening, eventBus, setStats, setPeerCount, setListening]);
 
   const sendPath = async svgPath => {
     if (!svgPath || !graffitiGossip) return;

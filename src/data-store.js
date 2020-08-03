@@ -10,13 +10,9 @@ class LocalForageDatastore extends Adapter {
     });
   }
 
-  open() {
-    return;
-  }
+  open() {}
 
-  close() {
-    return;
-  }
+  close() {}
 
   async put(key, val) {
     return this.store.setItem(key.toString(), val);

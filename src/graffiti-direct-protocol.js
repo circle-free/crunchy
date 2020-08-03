@@ -1,13 +1,20 @@
 'use strict';
 
+import pipe from 'it-pipe';
+
 import { Request } from './proto';
+import Message from './message';
+import dataStore from './data-store';
 
-const pipe = require('it-pipe');
-const dataStore = require('./data-store');
-
-const onSyncReqGeneratorWith = source =>
+const onSyncReqGeneratorWith = connection => source =>
   (async function* () {
-    for await (const { data } of source) {
+    const peerShortId = connection.remotePeer.toB58String().slice(0, 8);
+
+    for await (const message of source) {
+      console.log('forawait -> message', message);
+      console.info(`Received direct message from peer ${peerShortId}`);
+
+      const { data } = message;
       const { type } = Request.decode(data);
 
       if (type !== Request.Type.SYNC) return;
@@ -23,14 +30,12 @@ export default {
   },
 
   handle({ connection, stream }) {
-    const peerShortId = connection.remotePeer.toB58String().slice(0, 8);
-    console.info(`Received direct message from peer ${peerShortId}`);
-
-    return pipe(stream, onSyncReqGeneratorWith, stream).catch(console.error);
+    return pipe(stream, onSyncReqGeneratorWith(connection), stream).catch(console.error);
   },
 
-  send({ message, stream, cb }) {
-    const raw = Request.encode(message);
+  sendSync({ stream, cb }) {
+    const { payload } = new Message(Request.Type.SYNC);
+    const raw = Request.encode(payload);
 
     return pipe([raw], stream, async source => {
       for await (const { data } of source) {

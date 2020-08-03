@@ -33,6 +33,10 @@ const Gossipsub = require('libp2p-gossipsub');
 const PeerId = require('peer-id');
 const idJSON = require('../id.json');
 const GraffitiGossip = require('./graffiti-gossip-protocol');
+// graffiti direct protocol
+const GraffitiDirect = require('./graffiti-direct-protocol');
+
+const pipe = require('it-pipe');
 
 const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = process.env;
 
@@ -51,6 +55,47 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
 
   // Create the node
   const libp2p = await createBootstrapNode(peerId, addrs);
+
+  // Add direct message handler
+  libp2p.handle(GraffitiDirect.PROTOCOL, GraffitiDirect.handler);
+
+  // Set up our input handler
+  process.stdin.on('data', message => {
+    // remove the newline
+    message = message.slice(0, -1);
+
+    // Iterate over all peers, and send messages to peers we are connected to
+    libp2p.peerStore.peers.forEach(async peerData => {
+      // If they don't support the graffiti direct protocol, ignore
+      if (!peerData.protocols.includes(GraffitiDirect.PROTOCOL)) return;
+
+      // If we're not connected, ignore
+      const connection = libp2p.connectionManager.get(peerData.id);
+      if (!connection) return;
+
+      try {
+        const { stream } = await connection.newStream([GraffitiDirect.PROTOCOL]);
+        await GraffitiDirect.send(message, stream);
+      } catch (err) {
+        console.error('Could not negotiate graffiti direct protocol stream with peer', err);
+      }
+    });
+  });
+
+  libp2p.handle('/graffiti/direct/1.0.0', ({ stream }) =>
+    pipe(
+      stream,
+      source =>
+        (async function* () {
+          for await (const msg of source) {
+            console.log('forawait -> msg', msg);
+
+            yield `reply: ${msg}`;
+          }
+        })(),
+      stream,
+    ).catch(console.error),
+  );
 
   // Start the node
   await libp2p.start();

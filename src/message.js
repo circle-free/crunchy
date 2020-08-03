@@ -32,7 +32,7 @@ class Message {
 
         break;
       case Request.Type.SYNC:
-        this.payload = Request.encode({ type, lastPath: data });
+        this.payload = Request.encode({ type });
 
         break;
       default:
@@ -46,10 +46,13 @@ class Message {
       const message = new Message(request.type);
 
       switch (request.type) {
-        case Request.Type.PATH:
+        case Request.Type.PATH: {
           const { id, data, created } = request.path;
           message.path = { id, created, data: data.toString() };
+
           break;
+        }
+
         case Request.Type.UPDATE_PEER:
           message.name = request.updatePeer.userHandle.toString();
           break;
