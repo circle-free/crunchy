@@ -1,6 +1,6 @@
 import PeerId from 'peer-id';
 
-export async function getOrCreatePeerId() {
+export default async function getOrCreatePeerId() {
   let peerId;
 
   try {

@@ -1,4 +1,4 @@
-import { Request, Stats } from './proto';
+const { Request, Stats } = require('./proto');
 
 class Message {
   constructor(type, data) {
@@ -75,6 +75,6 @@ class Message {
   }
 }
 
-export default Message;
-export const Type = Request.Type;
-export const NodeType = Stats.NodeType;
+module.exports = Message;
+module.exports.Type = Request.Type;
+module.exports.NodeType = Stats.NodeType;

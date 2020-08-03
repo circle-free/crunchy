@@ -1,19 +1,21 @@
 'use strict';
 
+import Message, { Type, NodeType } from './message';
+
 const EventEmitter = require('events');
 
-const Message = require('./message');
+const TOPIC = 'graffiti/gossip/1.0.0';
 
 class PubSub extends EventEmitter {
   /**
    * @param {Libp2p} libp2p A Libp2p node to communicate through
    * @param {string} topic The topic to subscribe to
    */
-  constructor(libp2p, topic) {
+  constructor(libp2p) {
     super();
 
     this.libp2p = libp2p;
-    this.topic = topic;
+    this.topic = TOPIC;
 
     this.connectedPeers = new Set();
     this.stats = new Map();
@@ -48,12 +50,12 @@ class PubSub extends EventEmitter {
       try {
         const message = Message.fromPayload(payload);
 
-        if (message.type === Message.Type.PATH) {
+        if (message.type === Type.PATH) {
           this.emit('path', { from: message.from, path: message.path });
           return;
         }
 
-        if (message.type === Message.Type.STATS) {
+        if (message.type === Type.STATS) {
           console.log('Incoming Stats:', message.from, message.stats);
           // TODO: why this?
           this.stats.set(message.from, message.stats);
@@ -61,7 +63,7 @@ class PubSub extends EventEmitter {
           return;
         }
 
-        if (message.type === Message.Type.UPDATE_PEER) {
+        if (message.type === Type.UPDATE_PEER) {
           this.emit('peer:update', { from: message.from, name: message.name });
           return;
         }
@@ -111,7 +113,7 @@ class PubSub extends EventEmitter {
    * @param {Buffer|string} name Username to change to
    */
   async updatePeer(name) {
-    const { payload } = new Message(Message.Type.UPDATE_PEER, name);
+    const { payload } = new Message(Type.UPDATE_PEER, name);
 
     try {
       await this.libp2p.pubsub.publish(this.topic, payload);
@@ -125,8 +127,8 @@ class PubSub extends EventEmitter {
    * @param {Array<Buffer>} connectedPeers
    */
   async sendStats(connectedPeers) {
-    const stats = { connectedPeers, nodeType: Message.NodeType.BROWSER };
-    const { payload } = new Message(Message.Type.STATS, stats);
+    const stats = { connectedPeers, nodeType: NodeType.BROWSER };
+    const { payload } = new Message(Type.STATS, stats);
 
     try {
       await this.libp2p.pubsub.publish(this.topic, payload);
@@ -140,7 +142,7 @@ class PubSub extends EventEmitter {
    * @param {object} path The path to send
    */
   async sendPath(path) {
-    const { payload } = new Message(Message.Type.PATH, path);
+    const { payload } = new Message(Type.PATH, path);
 
     try {
       await this.libp2p.pubsub.publish(this.topic, payload);
@@ -150,5 +152,4 @@ class PubSub extends EventEmitter {
   }
 }
 
-module.exports = PubSub;
-module.exports.TOPIC = 'graffiti/gossip/1.0.0';
+export default PubSub;

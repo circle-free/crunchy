@@ -41,7 +41,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "prettier": "prettier --write 'bootstrap-node/src/**/*.js' 'src/**/*.js' 'src/**/*.jsx'"
+    "prettier": "prettier --write 'bootstrap-node/src/**/*.js' 'src/**/*.js' 'src/**/*.jsx'",
+    "host": "http-server ./build --ssl --cert ./webserver/cert.crt --key ./webserver/key.key --port 61234"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -62,6 +63,7 @@
     "babel-eslint": "^10.1.0",
     "eslint": "^6.6.0",
     "eslint-config-richardpringle": "^2.0.0",
+    "http-server": "^0.12.3",
     "prettier": "^2.0.5"
   }
 }
