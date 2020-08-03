@@ -39,4 +39,4 @@ class LocalForageDatastore extends Adapter {
   }
 }
 
-module.exports = LocalForageDatastore;
+export default LocalForageDatastore;

@@ -51,6 +51,13 @@ const createLibp2p = async (peerId, libp2pDatastore) => {
           enabled: true,
         },
       },
+      // relay: {
+      //   enabled: true,
+      //   hop: {
+      //     enabled: true,
+      //     active: true,
+      //   },
+      // },
     },
   });
 

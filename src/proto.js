@@ -39,4 +39,4 @@ const { Request, Stats } = protons(`
   }
 `);
 
-module.exports = { Request, Stats };
+export { Request, Stats };

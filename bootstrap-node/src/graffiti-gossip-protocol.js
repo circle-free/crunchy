@@ -1,4 +1,4 @@
-const Message = require('../../src/message');
+const Message = require('./message');
 
 class PubSub {
   /**

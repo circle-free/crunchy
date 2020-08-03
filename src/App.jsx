@@ -2,7 +2,7 @@ import React, { Fragment, useCallback, useState, useEffect } from 'react';
 import EventEmitter from 'events';
 import { useSvgDrawing } from './svg-drawing/react';
 import { ChromePicker } from 'react-color';
-import { getOrCreatePeerId } from './peer-id';
+import getOrCreatePeerId from './peer-id';
 
 // Send paths over over Pubsub
 import GraffitiGossip from './graffiti-gossip-protocol';
@@ -156,7 +156,7 @@ function App({ createLibp2p }) {
 
     // Create the pubsub graffitiGossip
     if (!graffitiGossip) {
-      const graffitiGossip = new GraffitiGossip(libp2p, GraffitiGossip.TOPIC);
+      const graffitiGossip = new GraffitiGossip(libp2p);
 
       // Listen for paths
       graffitiGossip.on('path', ({ from, path }) => {

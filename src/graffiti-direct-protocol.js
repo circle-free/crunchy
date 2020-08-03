@@ -1,9 +1,9 @@
 'use strict';
 
-const pipe = require('it-pipe');
+import { Request } from './proto';
 
+const pipe = require('it-pipe');
 const dataStore = require('./data-store');
-const { Request } = require('./proto');
 
 const onSyncReqGeneratorWith = source =>
   (async function* () {
@@ -17,7 +17,7 @@ const onSyncReqGeneratorWith = source =>
     }
   })();
 
-module.exports = {
+export default {
   get protocol() {
     return '/graffiti/direct/1.0.0';
   },
