@@ -21,6 +21,7 @@ class Message {
         break;
       case Request.Type.STATS:
         this.payload = Request.encode({ type, stats: data });
+
         break;
       case Request.Type.UPDATE_PEER:
         this.payload = Request.encode({
@@ -29,8 +30,12 @@ class Message {
             userHandle: Buffer.from(data),
           },
         });
+
+        break;
       case Request.Type.SYNC:
         this.payload = Request.encode({ type, lastPath: data });
+
+        break;
       default:
         throw Error('Invalid Type');
     }

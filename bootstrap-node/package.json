@@ -22,10 +22,5 @@
     "peer-id": "^0.13.13",
     "wrtc": "^0.4.6"
   },
-  "devDependencies": {
-    "babel-eslint": "^10.1.0",
-    "eslint": "^7.6.0",
-    "eslint-config-richardpringle": "^2.0.0",
-    "prettier": "^2.0.5"
-  }
+  "devDependencies": {}
 }

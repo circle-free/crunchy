@@ -59,6 +59,9 @@
     ]
   },
   "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.6.0",
+    "eslint-config-richardpringle": "^2.0.0",
     "prettier": "^2.0.5"
   }
 }

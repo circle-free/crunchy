@@ -12,7 +12,7 @@ const onSyncReqGeneratorWith = source =>
 
       if (type !== Request.Type.SYNC) return;
 
-      const raws = await dataStore.all().then(messages.map(message => Request.encode(message)));
+      const raws = await dataStore.all().then(messages => messages.map(message => Request.encode(message)));
       for (const raw of raws) yield raw;
     }
   })();
