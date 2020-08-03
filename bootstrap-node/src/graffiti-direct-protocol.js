@@ -1,14 +1,14 @@
 'use strict';
 const pipe = require('it-pipe');
 
-// Define the codec of our chat protocol
-const PROTOCOL = '/libp2p/chat/1.0.0';
+// Define the codec of our graffiti direct protocol
+const PROTOCOL = '/graffiti/direct/1.0.0';
 
 const AutoReplies = [
   'You tell the best stories!',
   'Did you know Im actually a robot?',
   'Speaking of... did you ever see that movie Splash? Mermaids are neat.',
-  'this is my favorite chat',
+  'this is my favorite graffiti',
   'i hope there are muffins to eat on the break, im hungry',
   "doo doo deee, we're sorry, the number you dialed cannot be reached",
   'remember the sound of dial up internet? they should bring that back',

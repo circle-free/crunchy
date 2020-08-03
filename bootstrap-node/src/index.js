@@ -32,10 +32,10 @@ const Gossipsub = require('libp2p-gossipsub');
 
 const PeerId = require('peer-id');
 const idJSON = require('../id.json');
-const PubsubChat = require('./chat');
+const GraffitiGossip = require('./graffiti-gossip-protocol');
 
-// Chat protocol
-const ChatProtocol = require('./chat-protocol');
+// graffiti direct protocol
+const GraffitiDirect = require('./graffiti-direct-protocol');
 
 const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = process.env;
 
@@ -55,8 +55,8 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
   // Create the node
   const libp2p = await createBootstrapNode(peerId, addrs);
 
-  // Add chat handler
-  libp2p.handle(ChatProtocol.PROTOCOL, ChatProtocol.handler);
+  // Add direct message handler
+  libp2p.handle(GraffitiDirect.PROTOCOL, GraffitiDirect.handler);
 
   // Set up our input handler
   process.stdin.on('data', message => {
@@ -65,18 +65,18 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
 
     // Iterate over all peers, and send messages to peers we are connected to
     libp2p.peerStore.peers.forEach(async peerData => {
-      // If they don't support the chat protocol, ignore
-      if (!peerData.protocols.includes(ChatProtocol.PROTOCOL)) return;
+      // If they don't support the graffiti direct protocol, ignore
+      if (!peerData.protocols.includes(GraffitiDirect.PROTOCOL)) return;
 
       // If we're not connected, ignore
       const connection = libp2p.connectionManager.get(peerData.id);
       if (!connection) return;
 
       try {
-        const { stream } = await connection.newStream([ChatProtocol.PROTOCOL]);
-        await ChatProtocol.send(message, stream);
+        const { stream } = await connection.newStream([GraffitiDirect.PROTOCOL]);
+        await GraffitiDirect.send(message, stream);
       } catch (err) {
-        console.error('Could not negotiate chat protocol stream with peer', err);
+        console.error('Could not negotiate graffiti direct protocol stream with peer', err);
       }
     });
   });
@@ -88,17 +88,19 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
   console.log('\nNode supports protocols:');
   libp2p.upgrader.protocols.forEach((_, p) => console.log(p));
 
-  // Create the Pubsub based chat extension
-  const pubsubChat = new PubsubChat(libp2p, PubsubChat.TOPIC, ({ from, message }) => {
+  // Create the Pubsub based graffiti gossip extension
+  const graffitiGossip = new GraffitiGossip(libp2p, GraffitiGossip.TOPIC, ({ from, message }) => {
     const fromMe = from === libp2p.peerId.toB58String();
     let user = from.substring(0, 6);
 
-    if (pubsubChat.userHandles.has(from)) {
-      user = pubsubChat.userHandles.get(from);
+    if (graffitiGossip.userHandles.has(from)) {
+      user = graffitiGossip.userHandles.get(from);
     }
 
     console.info(
-      `${fromMe ? PubsubChat.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}) (${message.id}): ${message.data}`,
+      `${fromMe ? GraffitiGossip.CLEARLINE : ''}${user}(${new Date(message.created).toLocaleTimeString()}) (${message.id}): ${
+        message.data
+      }`,
     );
   });
 
@@ -107,13 +109,13 @@ const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = pro
     // Remove trailing newline
     message = message.slice(0, -1);
     // If there was a command, exit early
-    if (pubsubChat.checkCommand(message)) return;
+    if (graffitiGossip.checkCommand(message)) return;
 
     try {
       // Publish the message
-      await pubsubChat.sendPath(message);
+      await graffitiGossip.sendPath(message);
     } catch (err) {
-      console.error('Could not publish chat', err);
+      console.error('Could not publish message', err);
     }
   });
 })();

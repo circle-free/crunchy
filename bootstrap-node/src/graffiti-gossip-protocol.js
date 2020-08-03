@@ -1,32 +1,26 @@
-const EventEmitter = require('events');
 const Message = require('./message');
 
-class Chat extends EventEmitter {
+class PubSub {
   /**
    * @param {Libp2p} libp2p A Libp2p node to communicate through
    * @param {string} topic The topic to subscribe to
+   * @param {function(Message)} messageHandler Called with every `Message` received on `topic`
    */
-  constructor(libp2p, topic) {
-    super();
-
+  constructor(libp2p, topic, messageHandler) {
     this.libp2p = libp2p;
     this.topic = topic;
+    this.messageHandler = messageHandler;
+    this.userHandles = new Map([[libp2p.peerId.toB58String(), 'Me']]);
 
     this.connectedPeers = new Set();
-    this.stats = new Map();
 
     this.libp2p.connectionManager.on('peer:connect', connection => {
-      console.log('Connected to', connection.remotePeer.toB58String());
-
       if (this.connectedPeers.has(connection.remotePeer.toB58String())) return;
-
       this.connectedPeers.add(connection.remotePeer.toB58String());
       this.sendStats(Array.from(this.connectedPeers));
     });
 
     this.libp2p.connectionManager.on('peer:disconnect', connection => {
-      console.log('Disconnected from', connection.remotePeer.toB58String());
-
       if (this.connectedPeers.delete(connection.remotePeer.toB58String())) {
         this.sendStats(Array.from(this.connectedPeers));
       }
@@ -37,7 +31,22 @@ class Chat extends EventEmitter {
   }
 
   /**
-   * Subscribes to `Chat.topic`. All messages will emitted
+   * Handler that is run when `this.libp2p` starts
+   */
+  onStart() {
+    this.join();
+  }
+
+  /**
+   * Handler that is run when `this.libp2p` stops
+   */
+  onStop() {
+    this.leave();
+  }
+
+  /**
+   * Subscribes to `graffiti/gossip`. All messages will be
+   * forwarded to `messageHandler`
    * @private
    */
   join() {
@@ -46,20 +55,14 @@ class Chat extends EventEmitter {
         const message = Message.fromPayload(payload);
 
         if (message.type === Message.Type.PATH) {
-          this.emit('path', { from: message.from, path: message.path });
-          return;
-        }
-
-        if (message.type === Message.Type.STATS) {
-          console.log('Incoming Stats:', message.from, message.stats);
-          // TODO: why this?
-          this.stats.set(message.from, message.stats);
-          this.emit('stats', this.stats);
+          this.messageHandler({ from: message.from, message: message.path });
           return;
         }
 
         if (message.type === Message.Type.UPDATE_PEER) {
           this.emit('peer:update', { from: message.from, name: message.name });
+          console.info(`System: ${message.from} is now ${message.name}.`);
+          this.userHandles.set(message.from, message.name);
           return;
         }
       } catch (err) {
@@ -69,14 +72,14 @@ class Chat extends EventEmitter {
   }
 
   /**
-   * Unsubscribes from `Chat.topic`
+   * Unsubscribes from `graffiti/gossip`
    * @private
    */
   leave() {
     this.libp2p.pubsub.unsubscribe(this.topic);
   }
 
-  // TODO: this will likely be removed
+  // TODO: this will likely be removed or repurposed (CLI)
   /**
    * Crudely checks the input for a command. If no command is
    * found `false` is returned. If the input contains a command,
@@ -86,20 +89,14 @@ class Chat extends EventEmitter {
    */
   checkCommand(input) {
     const str = input.toString();
-
     if (str.startsWith('/')) {
       const args = str.slice(1).split(' ');
-
       switch (args[0]) {
         case 'name':
           this.updatePeer(args[1]);
-
           return true;
-        default:
-          return false;
       }
     }
-
     return false;
   }
 
@@ -122,7 +119,7 @@ class Chat extends EventEmitter {
    * @param {Array<Buffer>} connectedPeers
    */
   async sendStats(connectedPeers) {
-    const stats = { connectedPeers, nodeType: Message.NodeType.BROWSER };
+    const stats = { connectedPeers, nodeType: Message.NodeType.NODEJS };
     const { payload } = new Message(Message.Type.STATS, stats);
 
     try {
@@ -147,6 +144,6 @@ class Chat extends EventEmitter {
   }
 }
 
-module.exports = Chat;
-// TODO: change this
-module.exports.TOPIC = '/libp2p/example/chat/1.0.0';
+module.exports = PubSub;
+module.exports.TOPIC = 'graffiti/gossip/1.0.0';
+module.exports.CLEARLINE = '\033[1A';
