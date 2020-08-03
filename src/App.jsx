@@ -4,8 +4,8 @@ import { useSvgDrawing } from './svg-drawing/react';
 import { ChromePicker } from 'react-color';
 import { getOrCreatePeerId } from './peer-id';
 
-// Chat over Pubsub
-import PubsubChat from './chat';
+// Send paths over over Pubsub
+import GraffitiGossip from './graffiti-gossip-protocol';
 import Datastore from './data-store';
 
 import { Slider, Button, IconButton } from '@material-ui/core';
@@ -76,7 +76,8 @@ function App({ createLibp2p }) {
   const [smoothing, setSmoothing] = useState(DEFAULT_PEN_SMOOTHING);
   const [drawing, setDrawing] = useState(DEFAULT_PEN_ENABLED);
   const [autoSync, setAutoSync] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  // TODO: use for loading animation maybe
+  // const [syncing, setSyncing] = useState(false);
   const [pathDrawnListener, setPathDrawnListener] = useState(null);
 
   // LibP2P
@@ -88,8 +89,8 @@ function App({ createLibp2p }) {
   const [libp2pDatastore, setLibp2pDatastore] = useState(null);
   const eventBus = new EventEmitter();
 
-  // Chat
-  const [chatClient, setChatClient] = useState(null);
+  // Graffiti Gossip
+  const [graffitiGossip, setGraffitiGossip] = useState(null);
   const [peers, setPeers] = useState({});
 
   // Metrics
@@ -106,12 +107,12 @@ function App({ createLibp2p }) {
       setPathDrawnListener(null);
     }
 
-    if (!pathDrawnListener && chatClient && autoSync) {
-      const callback = sendMessage;
+    if (!pathDrawnListener && graffitiGossip && autoSync) {
+      const callback = sendPath;
       draw.onPathDrawn(callback);
       setPathDrawnListener(() => callback);
     }
-  }, [draw, pathDrawnListener, chatClient]);
+  }, [draw, pathDrawnListener, graffitiGossip]);
 
   // Datastores
   useEffect(() => {
@@ -149,31 +150,27 @@ function App({ createLibp2p }) {
     }
   }, [peerId, libp2p, createLibp2p, setPeerId]);
 
-  // Chat
+  // Graffiti Gossip
   useEffect(() => {
     if (!libp2p) return;
 
-    // Create the pubsub chatClient
-    if (!chatClient) {
-      const pubsubChat = new PubsubChat(libp2p, PubsubChat.TOPIC);
+    // Create the pubsub graffitiGossip
+    if (!graffitiGossip) {
+      const graffitiGossip = new GraffitiGossip(libp2p, GraffitiGossip.TOPIC);
 
       // Listen for paths
-      pubsubChat.on('path', ({ from, path }) => {
+      graffitiGossip.on('path', ({ from, path }) => {
         const isMine = from === libp2p.peerId.toB58String();
-        console.log(
-          `Received path ${path.id} that ${from}${isMine ? ' (self)' : ''} created at ${new Date(path.created).toLocaleTimeString()}.`,
-        );
+        console.info(`${from}${isMine ? ' (self)' : ''} created path ${path.id} at ${new Date(path.created).toLocaleTimeString()}.`);
 
-        console.log(`Received path ${message.from}${message.isMine ? ' (self)' : ''} created at ${message.created}.`);
-
-        // TODO: validate path here or in chat?
+        // TODO: validate path here or in graffitiGossip?
         draw.insertPath(path.data);
         messageDatastore.put(path.id, path.data);
       });
 
       // Listen for peer updates
-      pubsubChat.on('peer:update', ({ from, name }) => {
-        console.log(`${from} is now known as ${name}.`);
+      graffitiGossip.on('peer:update', ({ from, name }) => {
+        console.info(`${from} is now known as ${name}.`);
         // TODO: consider having all the paths embed the peer name
         // setPeers(peers => {
         //   const newPeers = { ...peers };
@@ -184,11 +181,11 @@ function App({ createLibp2p }) {
 
       // TODO: consolidate stats to here
       // Forward stats events to the eventBus
-      pubsubChat.on('stats', stats => eventBus.emit('stats', stats));
+      graffitiGossip.on('stats', stats => eventBus.emit('stats', stats));
 
-      setChatClient(pubsubChat);
+      setGraffitiGossip(graffitiGossip);
     }
-  }, [libp2p, chatClient, draw, eventBus, setChatClient, messageDatastore]);
+  }, [libp2p, graffitiGossip, draw, eventBus, setGraffitiGossip, messageDatastore]);
 
   // Metrics
   useEffect(() => {
@@ -210,12 +207,11 @@ function App({ createLibp2p }) {
     }
   }, [libp2p, listening, eventBus, setStats, setPeerCount, setListening]);
 
-  // Sends the current message in the chat field
-  const sendMessage = async svgPath => {
-    if (!svgPath || !chatClient) return;
+  const sendPath = async svgPath => {
+    if (!svgPath || !graffitiGossip) return;
 
     try {
-      await chatClient.sendPath({ id: svgPath.id, data: svgPath.outerHTML });
+      await graffitiGossip.sendPath({ id: svgPath.id, data: svgPath.outerHTML });
       console.info('Publish done');
     } catch (err) {
       console.error('Could not send message', err);
@@ -277,16 +273,16 @@ function App({ createLibp2p }) {
     [draw],
   );
 
-  const handleDownload = useCallback(
-    extension => e => {
-      // console.log(draw.getSvgXML());
-      draw.download(extension);
-    },
-    [draw],
-  );
+  // const handleDownload = useCallback(
+  //   extension => e => {
+  //     // console.log(draw.getSvgXML());
+  //     draw.download(extension);
+  //   },
+  //   [draw],
+  // );
 
   const handlePublish = useCallback(() => {
-    draw.getDrawnPaths().map(sendMessage);
+    draw.getDrawnPaths().map(sendPath);
   }, [draw]);
 
   const handleToggleSync = useCallback(() => {

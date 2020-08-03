@@ -19,7 +19,7 @@ const onSyncReqGeneratorWith = source =>
 
 module.exports = {
   get protocol() {
-    return '/libp2p/grifiti/1.0.0';
+    return '/graffiti/direct/1.0.0';
   },
 
   handle({ connection, stream }) {
