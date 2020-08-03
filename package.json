@@ -42,7 +42,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "prettier": "prettier --write 'bootstrap-node/src/**/*.js' 'src/**/*.js' 'src/**/*.jsx'",
-    "host": "http-server ./build --ssl --cert ./webserver/cert.crt --key ./webserver/key.key --port 61234"
+    "host": "http-server ./build --ssl --cert ./webserver/cert.crt --key ./webserver/key.key --port 61234",
+    "bootstrap": "node bootstrap-node"
   },
   "eslintConfig": {
     "extends": "react-app"
