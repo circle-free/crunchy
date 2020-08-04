@@ -24,7 +24,7 @@ const createLibp2p = async (peerId, libp2pDatastore) => {
   const libp2p = await Libp2p.create({
     peerId,
     addresses: {
-      listen: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star'],
+      listen: ['/dns4/wrtc-star2.sjc.dwebops.pub/tcp/443/wss/p2p-webrtc-star'],
     },
     modules: {
       transport: [Websockets, WebrtcStar],
@@ -42,7 +42,7 @@ const createLibp2p = async (peerId, libp2pDatastore) => {
     config: {
       peerDiscovery: {
         bootstrap: {
-          list: ['/ip4/0.0.0.0/tcp/15555/ws/p2p-webrtc-star/p2p/16Uiu2HAm9Byae61EzUQNStvfRzdnQTqdccMDwaGja39RnyYAnNV7'],
+          list: ['/dns4/sjc-1.bootstrap.libp2p.io/tcp/443/wss/ipfs/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN'],
         },
       },
       dht: {
@@ -51,13 +51,6 @@ const createLibp2p = async (peerId, libp2pDatastore) => {
           enabled: true,
         },
       },
-      // relay: {
-      //   enabled: true,
-      //   hop: {
-      //     enabled: true,
-      //     active: true,
-      //   },
-      // },
     },
   });
 

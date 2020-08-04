@@ -56,7 +56,7 @@ class PubSub extends EventEmitter {
         }
 
         if (message.type === Type.STATS) {
-          console.log('Incoming Stats:', message.from, message.stats);
+          // console.log('Incoming Stats:', message.from, message.stats);
           // TODO: why this?
           this.stats.set(message.from, message.stats);
           this.emit('stats', this.stats);
