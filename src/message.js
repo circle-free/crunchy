@@ -13,8 +13,8 @@ class Message {
           type,
           path: {
             id: data.id,
-            data: Buffer.from(data.data),
-            created: Date.now(),
+            data: data.data,
+            prevId: data.prevId,
           },
         });
 
@@ -31,8 +31,8 @@ class Message {
         });
 
         break;
-      case Request.Type.SYNC:
-        this.payload = Request.encode({ type, lastPath: data });
+      case Request.Type.SYNC_REQUEST:
+        this.payload = Request.encode({ type, syncRequest: { ids: data } });
 
         break;
       default:
@@ -41,14 +41,22 @@ class Message {
   }
 
   static fromPayload(payload) {
+    const { from, data, seqno, topicIDs, signature, key } = payload;
+
+    // TODO: see what's in there
+
     try {
-      const request = Request.decode(payload.data);
+      const request = Request.decode(data);
       const message = new Message(request.type);
 
       switch (request.type) {
         case Request.Type.PATH:
-          const { id, data, created } = request.path;
-          message.path = { id, created, data: data.toString() };
+          const { id, data, prevId } = request.path;
+          message.path = {
+            id: id.toString(),
+            data: data.toString(),
+            prevId: prevId.toString()
+          };
           break;
         case Request.Type.UPDATE_PEER:
           message.name = request.updatePeer.userHandle.toString();
@@ -56,15 +64,14 @@ class Message {
         case Request.Type.STATS:
           message.stats = request.stats;
           break;
-        case Request.Type.SYNC:
-          message.lastPath = request.lastPath;
+        case Request.Type.SYNC_REQUEST:
+          message.ids = request.syncRequest.ids.map(id => id.toString());
           break;
         default:
           return null;
       }
 
-      message.payload = payload;
-      message.from = payload.from;
+      message.from = from;
       message.type = request.type;
       return message;
     } catch (err) {
@@ -76,5 +83,5 @@ class Message {
 }
 
 export default Message;
-export const Type = Request.Type;
+export const MessageType = Request.Type;
 export const NodeType = Stats.NodeType;

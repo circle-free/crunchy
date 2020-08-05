@@ -1,41 +1,91 @@
-'use strict';
-
-import { Request } from './proto';
+import Message, { MessageType } from './message';
 
 const pipe = require('it-pipe');
-const dataStore = require('./data-store');
 
-const onSyncReqGeneratorWith = source =>
+const textDecoder = new TextDecoder('utf-8');
+
+const EventEmitter = require('events');
+
+const onSyncReqGeneratorWith = (connection, store) => source =>
   (async function* () {
-    for await (const { data } of source) {
-      const { type } = Request.decode(data);
+    const peerId = connection.remotePeer.toB58String();
 
-      if (type !== Request.Type.SYNC) return;
+    for await (const message of source) {
+      const { type, ids } = Message.fromPayload({ from: peerId, data: message._bufs[0] });
 
-      const raws = await dataStore.all().then(messages => messages.map(message => Request.encode(message)));
-      for (const raw of raws) yield raw;
+      if (type !== MessageType.SYNC_REQUEST) return;
+
+      console.info(`Received a sync request from ${peerId}.`);
+
+      const idSet = new Set(ids);
+      const keyValuePairs = (await store.all()).filter(({ key }) => !idSet.has(key));
+      const paths = keyValuePairs.map(({ key, value }) => ({ id: key, data: value.data, prevId: value.prevId }));
+
+      console.info(`Sending ${paths.length} paths to ${peerId}`);
+
+      for (const path of paths) {
+        const { payload } = new Message(MessageType.PATH, path);
+        yield payload;
+      }
     }
   })();
 
-export default {
-  get protocol() {
-    return '/graffiti/direct/1.0.0';
-  },
+class DirectMessaging extends EventEmitter {
+  PROTOCOL = 'graffiti/direct/1.0.0';
+  
+  constructor(libp2p) {
+    super();
 
-  handle({ connection, stream }) {
-    const peerShortId = connection.remotePeer.toB58String().slice(0, 8);
-    console.info(`Received direct message from peer ${peerShortId}`);
+    this.libp2p = libp2p;
+  }
 
-    return pipe(stream, onSyncReqGeneratorWith, stream).catch(console.error);
-  },
+  handleWith(store) {
+    return ({ connection, stream }) =>
+      pipe(stream, onSyncReqGeneratorWith(connection, store), stream).catch(console.error);
+  }
 
-  send({ message, stream, cb }) {
-    const raw = Request.encode(message);
+  sendSyncRequest({ stream, ids = [], cb }) {
+    const { payload } = new Message(MessageType.SYNC_REQUEST, ids);
 
-    return pipe([raw], stream, async source => {
-      for await (const { data } of source) {
-        cb(Request.decode(data));
+    let pathCount = 0;
+
+    return pipe([payload], stream, async source => {
+      for await (const message of source) {
+        const { type, path } = Message.fromPayload({ data: message._bufs[0] });
+
+        if (type !== MessageType.PATH) return;
+
+        pathCount++;
+        cb(path);
       }
+
+      console.info(`Received ${pathCount} paths back from sync request.`);
     }).catch(console.error);
-  },
-};
+  }
+
+  tryGetFromPeer(connection, store) {
+    const peerId = connection.remotePeer.toB58String();
+    console.info(`Sending sync request to ${peerId}`);
+    const cb = path => this.emit('path', { from: peerId, path });
+
+    Promise.all([connection.newStream([this.PROTOCOL]), store.keys()])
+      .then(([{ stream }, ids]) => this.sendSyncRequest({ stream, ids, cb }))
+      .catch(console.error);
+  }
+}
+
+export default DirectMessaging;
+
+// const peer = await libp2p.peerRouting.findPeer(peerId, options)
+
+// libp2p.connectionManager.get(peerId)
+
+// const peerIdStrings = libp2p.metrics.peers
+
+// const protocols = libp2p.metrics.protocols
+
+// const peerStats = libp2p.metrics.forPeer(peerId)
+// console.log(peerStats.toJSON())
+
+// const peerStats = libp2p.metrics.forProtocol('/meshsub/1.0.0')
+// console.log(peerStats.toJSON())

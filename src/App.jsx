@@ -1,16 +1,9 @@
 import React, { Fragment, useCallback, useState, useEffect } from 'react';
-import EventEmitter from 'events';
 import { useSvgDrawing } from './svg-drawing/react';
 import { ChromePicker } from 'react-color';
-import getOrCreatePeerId from './peer-id';
 
-// Send paths over over Pubsub
-import GraffitiGossip from './graffiti-gossip-protocol';
-import Datastore from './data-store';
-
-import { Slider, Button, IconButton } from '@material-ui/core';
+import { Slider, IconButton } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
-import ClearIcon from '@material-ui/icons/Clear';
 import UndoIcon from '@material-ui/icons/Undo';
 import GestureIcon from '@material-ui/icons/Gesture';
 import ShowChartIcon from '@material-ui/icons/ShowChart';
@@ -19,9 +12,10 @@ import GridOffIcon from '@material-ui/icons/GridOff';
 import BrushIcon from '@material-ui/icons/Brush';
 import PanToolIcon from '@material-ui/icons/PanTool';
 import SyncIcon from '@material-ui/icons/Sync';
-import SyncDisabledIcon from '@material-ui/icons/SyncDisabled';
 import PublishIcon from '@material-ui/icons/Publish';
 import './App.css';
+
+import Node from './p2p-node';
 
 const size = 30;
 const DEFAULT_PEN_RADIUS = 5;
@@ -32,11 +26,6 @@ const DEFAULT_PEN_ENABLED = true;
 const DEFAULT_PEN_CLOSE = false;
 const DEFAULT_PEN_FILL = 'none';
 const DEFAULT_CANVAS_GRID = true;
-// const DEFAULT_INTEGERS = true;
-
-const getSvgPath = () => {
-  return `<path id="5a9acc55-fb7b-47d0-b630-ff885facc66b" fill="none" stroke="#f50057" stroke-width="5" d="M 57.59 56.22 C 57.33 56.48 57.43 56.27 56.3 57.51 C 55.16 58.75 53.31 60.45 51.91 62.41 C 50.52 64.37 50.52 64.47 49.34 67.3 C 48.15 70.12 47.12 73.4 45.98 76.53 C 44.85 79.66 44.72 79.54 43.66 82.94 C 42.61 86.34 41.51 89.61 40.71 93.55 C 39.91 97.48 39.89 98.88 39.68 102.61 C 39.47 106.34 39.12 108.53 39.68 112.19 C 40.23 115.85 41.05 117.92 42.47 120.9 C 43.89 123.87 44.8 125.06 46.79 127.07 C 48.77 129.07 49.98 129.85 52.37 130.93 C 54.76 132.01 56.74 132.17 58.72 132.48 C 60.7 132.79 60.14 133.04 62.27 132.48 C 64.41 131.92 66.29 131.05 69.38 129.68 C 72.48 128.31 74.22 127.34 77.76 125.62 C 81.31 123.9 83.29 122.84 87.11 121.07 C 90.93 119.3 92.27 118.75 96.87 116.75 C 101.46 114.76 105.03 113.18 110.09 111.09 C 115.15 109 116.84 108.1 122.19 106.3 C 127.54 104.51 132.44 103.19 136.83 102.13 C 141.22 101.06 140.12 101.32 144.15 100.99 C 148.19 100.66 152.15 100.48 157.02 100.48 C 161.89 100.49 163.8 100.14 168.5 101 C 173.21 101.86 175.35 102.68 180.52 104.77 C 185.7 106.85 189.49 108.63 194.36 111.42 C 199.23 114.21 201.1 115.27 204.88 118.73 C 208.66 122.19 210.97 125.29 213.26 128.73 C 215.54 132.16 215.39 133.29 216.3 135.91 C 217.22 138.53 217.27 139.25 217.83 141.82 C 218.39 144.39 218.74 145.83 219.1 148.75 C 219.45 151.68 219.5 153.57 219.61 156.45 C 219.71 159.32 219.55 161.02 219.61 163.13 C 219.66 165.24 219.81 165.96 219.86 167 C 219.91 168.03 219.86 167.92 219.86 168.29 C 219.86 168.65 219.86 168.65 219.86 168.8 C 219.86 168.96 219.86 169.01 219.86 169.06" stroke-linecap="round" stroke-linejoin="round"></path>`;
-};
 
 const area = path => path.getTotalLength() * Number(path.getAttribute('stroke-width'));
 
@@ -57,8 +46,8 @@ const lattice = s => `
   )
 `;
 
-function App({ createLibp2p }) {
-  // Draw O=object
+function App() {
+  // Draw Object
   const [renderRef, draw] = useSvgDrawing({
     penWidth: DEFAULT_PEN_RADIUS, // pen width
     penColor: DEFAULT_PEN_COLOR, // pen color
@@ -76,27 +65,12 @@ function App({ createLibp2p }) {
   const [smoothing, setSmoothing] = useState(DEFAULT_PEN_SMOOTHING);
   const [drawing, setDrawing] = useState(DEFAULT_PEN_ENABLED);
   const [autoSync, setAutoSync] = useState(false);
-  // TODO: use for loading animation maybe
-  // const [syncing, setSyncing] = useState(false);
   const [pathDrawnListener, setPathDrawnListener] = useState(null);
 
-  // LibP2P
-  const [peerId, setPeerId] = useState(null);
-  const [libp2p, setLibp2p] = useState(null);
+  // Node
+  const [node, setNode] = useState(null);
   const [started, setStarted] = useState(false);
-  const [datastoresLoaded, setDatastoresLoaded] = useState(false);
-  const [messageDatastore, setMessageDatastore] = useState(null);
-  const [libp2pDatastore, setLibp2pDatastore] = useState(null);
-  const eventBus = new EventEmitter();
-
-  // Graffiti Gossip
-  const [graffitiGossip, setGraffitiGossip] = useState(null);
-  const [peers, setPeers] = useState({});
-
-  // Metrics
-  const [listening, setListening] = useState(false);
-  const [peerCount, setPeerCount] = useState(0);
-  const [stats, setStats] = useState(new Map());
+  const [syncing, setSyncing] = useState(false);
 
   // Draw
   useEffect(() => {
@@ -107,121 +81,45 @@ function App({ createLibp2p }) {
       setPathDrawnListener(null);
     }
 
-    if (!pathDrawnListener && graffitiGossip && autoSync) {
+    if (!pathDrawnListener && node && autoSync) {
       const callback = sendPath;
       draw.onPathDrawn(callback);
       setPathDrawnListener(() => callback);
     }
-  }, [draw, pathDrawnListener, graffitiGossip]);
+  }, [draw, pathDrawnListener, node]);
 
-  // Datastores
+  // Node
   useEffect(() => {
-    if (messageDatastore && !datastoresLoaded && draw) {
-      setDatastoresLoaded(true);
-      messageDatastore.all().then(paths => paths.map(draw.insertPath));
-    }
+    if (node) return;
 
-    if (!messageDatastore) {
-      console.info('Creating message datastore instance.');
-      setMessageDatastore(new Datastore('messageStore'));
-    }
+    console.info('Creating P2P node instance.');
+    const p2pNode = new Node();
+    setNode(p2pNode);
 
-    if (!libp2pDatastore) {
-      console.info('Creating libp2p datastore instance.');
-      setLibp2pDatastore(new Datastore('libp2p'));
-    }
-  }, [setMessageDatastore, messageDatastore, datastoresLoaded, setDatastoresLoaded, libp2pDatastore, setLibp2pDatastore, draw]);
+    // Subscribe to events
+    p2pNode.on('path', ({ id, data, prevId }) => {
+      // TODO: Handle looking for id and prevId
+      draw.insertPath(data);
+      console.log('Path inserted.');
+    });
 
-  // App
-  useEffect(() => {
-    if (!peerId) {
-      console.info('Getting our PeerId.');
-      getOrCreatePeerId().then(setPeerId);
-      return;
-    }
-
-    if (!libp2p && libp2pDatastore) {
-      console.info('Creating our Libp2p instance.');
-      createLibp2p(peerId, libp2pDatastore).then(node => {
-        setLibp2p(node);
-        setStarted(true);
-        console.info('Libp2p instance created.');
-      });
-    }
-  }, [peerId, libp2p, createLibp2p, setPeerId]);
-
-  // Graffiti Gossip
-  useEffect(() => {
-    if (!libp2p) return;
-
-    // Create the pubsub graffitiGossip
-    if (!graffitiGossip) {
-      const graffitiGossip = new GraffitiGossip(libp2p);
-
-      // Listen for paths
-      graffitiGossip.on('path', ({ from, path }) => {
-        const isMine = from === libp2p.peerId.toB58String();
-        console.info(`${from}${isMine ? ' (self)' : ''} created path ${path.id} at ${new Date(path.created).toLocaleTimeString()}.`);
-
-        // TODO: validate path here or in graffitiGossip?
-        draw.insertPath(path.data);
-        messageDatastore.put(path.id, path.data);
-      });
-
-      // Listen for peer updates
-      graffitiGossip.on('peer:update', ({ from, name }) => {
-        console.info(`${from} is now known as ${name}.`);
-        // TODO: consider having all the paths embed the peer name
-        // setPeers(peers => {
-        //   const newPeers = { ...peers };
-        //   newPeers[id] = { name };
-        //   return newPeers;
-        // });
-      });
-
-      // TODO: consolidate stats to here
-      // Forward stats events to the eventBus
-      graffitiGossip.on('stats', stats => eventBus.emit('stats', stats));
-
-      setGraffitiGossip(graffitiGossip);
-    }
-  }, [libp2p, graffitiGossip, draw, eventBus, setGraffitiGossip, messageDatastore]);
-
-  // Metrics
-  useEffect(() => {
-    if (!libp2p) return;
-
-    if (!listening) {
-      eventBus.on('stats', stats => {
-        setStats(stats);
-      });
-
-      libp2p.peerStore.on('peer', peerId => {
-        const num = libp2p.peerStore.peers.size;
-        setPeerCount(num);
-      });
-
-      setListening(true);
-
-      return;
-    }
-  }, [libp2p, listening, eventBus, setStats, setPeerCount, setListening]);
+    p2pNode.start().then(paths => {
+      paths.map(({ data }) => draw.insertPath(data));
+      console.info('P2P node instance started.');
+    });
+  }, [node, draw]);
 
   const sendPath = async svgPath => {
-    if (!svgPath || !graffitiGossip) return;
+    if (!svgPath || !node) return;
 
-    try {
-      await graffitiGossip.sendPath({ id: svgPath.id, data: svgPath.outerHTML });
-      console.info('Publish done');
-    } catch (err) {
-      console.error('Could not send message', err);
-    }
+    // TODO: handle prevId
+    await node.broadcastPath({ id: svgPath.id, data: svgPath.outerHTML, prevId: "prevId" });
   };
 
   // Draw logic start
   const handleToggleGrid = useCallback(() => {
     setGrid(!grid);
-  }, [draw, grid]);
+  }, [grid]);
 
   const handleClear = useCallback(() => {
     draw.clear();
@@ -231,17 +129,14 @@ function App({ createLibp2p }) {
     draw.undo();
   }, [draw]);
 
-  const handleChangeRadius = useCallback(
-    (_, value) => {
+  const handleChangeRadius = useCallback((_, value) => {
       const num = Number(value);
 
       if (Number.isNaN(num)) return;
 
       draw.changePenWidth(num);
       setRadius(num);
-    },
-    [draw],
-  );
+    }, [draw]);
 
   const handleToggleSmoothing = useCallback(() => {
     draw.changeCurve(!smoothing);
@@ -253,33 +148,24 @@ function App({ createLibp2p }) {
     setDrawing(!drawing);
   }, [draw, drawing]);
 
-  const handleChangeSampleRate = useCallback(
-    (_, value) => {
+  const handleChangeSampleRate = useCallback((_, value) => {
       const num = Number(value);
 
       if (Number.isNaN(num)) return;
 
       draw.changeDelay(num);
       setSampleRate(num);
-    },
-    [draw],
-  );
+    }, [draw]);
 
-  const handleChangePenColor = useCallback(
-    color => {
+  const handleChangePenColor = useCallback(color => {
       draw.changePenColor(color.hex);
       setPenColor(color.hex);
-    },
-    [draw],
-  );
+    }, [draw]);
 
-  // const handleDownload = useCallback(
-  //   extension => e => {
-  //     // console.log(draw.getSvgXML());
-  //     draw.download(extension);
-  //   },
-  //   [draw],
-  // );
+  const handleDownload = useCallback(extension => e => {
+      // console.log(draw.getSvgXML());
+      draw.download(extension);
+    }, [draw]);
 
   const handlePublish = useCallback(() => {
     draw.getDrawnPaths().map(sendPath);
@@ -304,7 +190,9 @@ function App({ createLibp2p }) {
 
       <div className="options">
         <div className="canvas-buttons">
-          {/* <IconButton color="secondary" onClick={handleClear}><ClearIcon /></IconButton> */}
+          {/* <IconButton color="secondary" onClick={handleClear}>
+            <ClearIcon />
+          </IconButton> */}
           <IconButton color="secondary" onClick={handleUndo}>
             <UndoIcon />
           </IconButton>

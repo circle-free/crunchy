@@ -5,9 +5,7 @@ class LocalForageDatastore extends Adapter {
   constructor(name) {
     super();
 
-    this.store = localforage.createInstance({
-      name,
-    });
+    this.store = localforage.createInstance({ name });
   }
 
   open() {
@@ -35,7 +33,13 @@ class LocalForageDatastore extends Adapter {
   }
 
   async all() {
-    return this.store.keys().then(keys => Promise.all(keys.map(key => this.get(key))));
+    const keys = await this.store.keys();
+    const values = await Promise.all(keys.map(async key => this.get(key)));
+    return keys.map((key, i) => ({ key, value: values[i] }));
+  }
+
+  async keys() {
+    return this.store.keys();
   }
 }
 

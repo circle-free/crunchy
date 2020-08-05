@@ -8,19 +8,20 @@ const { Request, Stats } = protons(`
       PATH = 0;
       UPDATE_PEER = 1;
       STATS = 2;
-      SYNC = 3;
+      SYNC_REQUEST = 3;
     }
 
     required Type type = 1;
     optional Path path = 2;
     optional UpdatePeer updatePeer = 3;
     optional Stats stats = 4;
+    optional SyncRequest syncRequest = 5;
   }
 
   message Path {
-    required bytes data = 1;
-    required int64 created = 2;
-    required bytes id = 3;
+    required bytes id = 1;
+    required bytes data = 2;
+    required bytes prevId = 3;
   }
 
   message UpdatePeer {
@@ -36,6 +37,10 @@ const { Request, Stats } = protons(`
 
     repeated bytes connectedPeers = 1;
     optional NodeType nodeType = 2;
+  }
+
+  message SyncRequest {
+    repeated bytes ids = 1;
   }
 `);
 
