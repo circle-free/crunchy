@@ -38,6 +38,10 @@ const EventEmitter = require('events');
 const DAG_START = 'DAG_START';
 const MAX_PREDECESSORS = 3;
 const DAG_STORE_KEY = 'DAG_STORE_KEY';
+const DAG_IPFS_KEY = 'DAG_IPFS_KEY';
+
+const IPFS = require('ipfs');
+const all = require('it-all');
 
 const getPredecessors = graph => {
   const sinkIds = graph.sinks();
@@ -153,11 +157,21 @@ class Node extends EventEmitter {
             list: ['/dns4/sjc-1.bootstrap.libp2p.io/tcp/443/wss/ipfs/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN'],
           },
         },
+        relay: {
+          enabled: true,
+          hop: {
+            enabled: true,
+            active: true
+          }
+        },
         dht: {
           enabled: true,
           randomWalk: {
             enabled: true,
           },
+        },
+        pubsub: {
+          enabled: true
         },
       },
     });
@@ -168,7 +182,7 @@ class Node extends EventEmitter {
     // Listen for paths from Gossip
     this.graffitiGossip.on('path', ({ from, path }) => this.receivePath(from, path));
 
-    // Listen for peer updates
+    // Listen for peer updates from Gossip
     this.graffitiGossip.on('peer:update', ({ from, name }) => {
       console.info(`${from} is now known as ${name}.`);
 
@@ -178,6 +192,11 @@ class Node extends EventEmitter {
       //   newPeers[id] = { name };
       //   return newPeers;
       // });
+    });
+
+    // Listen for cids from Gossip
+    this.graffitiGossip.on('cid', ({ from, cid }) => {
+      console.info(`${from} sent cid ${cid}.`);
     });
 
     // Create direct protocol manager here
@@ -201,12 +220,12 @@ class Node extends EventEmitter {
 
     this.graffitiGossip.join();
 
-    return getOrderedPaths(this.graph);
-  }
+    this.ipfsNode = await IPFS.create();
+    const version = await this.ipfsNode.version();
 
-  async savePaths() {
-    console.info('Saving DAG to data store.');
-    return this.pathDataStore.put(DAG_STORE_KEY, jsonGraph.write(this.graph));
+    console.info('Started IPFS client Version:', version.version);
+
+    return getOrderedPaths(this.graph);
   }
 
   async receivePath(from, path) {
@@ -216,7 +235,7 @@ class Node extends EventEmitter {
       clearTimeout(this.storeDebounceTimer);
     }
 
-    this.storeDebounceTimer = setTimeout(() => this.savePaths(), 5000);
+    this.storeDebounceTimer = setTimeout(() => this.savePathsToLocal(), 5000);
 
     const isMine = from === this.libp2p.peerId.toB58String();
     console.info(`Received path ${id} from ${isMine ? 'self' : from} with ${predecessorIds.length} predecessors.`);
@@ -248,6 +267,39 @@ class Node extends EventEmitter {
 
       return false;
     }
+  }
+
+  async savePathsToLocal() {
+    console.info('Saving DAG to data store.');
+    return this.pathDataStore.put(DAG_STORE_KEY, jsonGraph.write(this.graph));
+  }
+
+  async loadPathsFromIpfs() {
+    const cidString = await this.pathDataStore.get(DAG_IPFS_KEY);
+    const serializedGraph = Buffer.concat(await all(this.ipfsNode.cat(cidString))).toString();
+    this.graph = jsonGraph.read(JSON.parse(serializedGraph));
+    console.info(`Loaded DAG from IPFS. Had ${this.graph.nodeCount() - 1} paths.`);
+  }
+
+  async deletePathsFromIpfs() {
+    console.info('Removing DAG from IPFS.');
+    await this.ipfsNode.files.rm(`/graphiti`);
+    await this.pathDataStore.delete(DAG_IPFS_KEY);
+    console.info(`Removed graphiti DAG from IPFS.`);
+  }
+
+  async savePathsToIpfs() {
+    console.info('Saving DAG to IPFS.');
+    const serializedGraph = JSON.stringify(jsonGraph.write(this.graph));
+    await this.ipfsNode.files.write('/graphiti', Buffer.from(serializedGraph), { mode: 744, create: true })
+    const cid = await this.ipfsNode.files.flush('/graphiti');
+    const cidString = cid.toString();
+    await this.pathDataStore.put(DAG_IPFS_KEY, cidString);
+    console.info(`Saved graphiti DAG as ${cidString} to IPFS.`);
+
+    console.info('Broadcasting IPFS CID.');
+    await this.graffitiGossip.sendCid({ cid });
+    console.info('IPFS CID broadcasted.');
   }
 }
 

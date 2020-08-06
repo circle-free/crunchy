@@ -32,6 +32,11 @@ class PubSub extends EventEmitter {
           this.emit('peer:update', { from: message.from, name: message.name });
           return;
         }
+
+        if (message.type === MessageType.GRAPH_CID) {
+          this.emit('cid', { from: message.from, cid: message.cid });
+          return;
+        }
       } catch (err) {
         console.error(err);
       }
@@ -59,6 +64,16 @@ class PubSub extends EventEmitter {
       await this.pubsub.publish(this.TOPIC, payload);
     } catch (err) {
       console.error('Could not publish path');
+    }
+  }
+
+  async sendCid({ cid }) {
+    const { payload } = new Message(MessageType.GRAPH_CID, cid);
+
+    try {
+      await this.pubsub.publish(this.TOPIC, payload);
+    } catch (err) {
+      console.error('Could not publish cid');
     }
   }
 }

@@ -33,6 +33,10 @@ class Message {
         this.payload = Request.encode({ type, syncRequest: { ids: data } });
 
         break;
+      case Request.Type.GRAPH_CID:
+        this.payload = Request.encode({ type, graphCid: { cid: data } });
+
+        break;
       default:
         throw Error('Invalid Type');
     }
@@ -54,12 +58,19 @@ class Message {
             data: data.toString(),
             predecessorIds: predecessorIds.map(id => id.toString()),
           };
+          
           break;
         case Request.Type.UPDATE_PEER:
           message.name = request.updatePeer.userHandle.toString();
+
           break;
         case Request.Type.SYNC_REQUEST:
           message.ids = request.syncRequest.ids.map(id => id.toString());
+
+          break;
+        case Request.Type.GRAPH_CID:
+          message.cid = request.graphCid.cid.toString();
+
           break;
         default:
           return null;

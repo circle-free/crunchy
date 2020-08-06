@@ -6,12 +6,14 @@ const { Request } = protons(`
       PATH = 0;
       UPDATE_PEER = 1;
       SYNC_REQUEST = 2;
+      GRAPH_CID = 3;
     }
 
     required Type type = 1;
     optional Path path = 2;
     optional UpdatePeer updatePeer = 3;
     optional SyncRequest syncRequest = 4;
+    optional GraphCid graphCid = 5;
   }
 
   message Path {
@@ -26,6 +28,10 @@ const { Request } = protons(`
 
   message SyncRequest {
     repeated bytes ids = 1;
+  }
+
+  message GraphCid {
+    optional bytes cid = 1;
   }
 `);
 

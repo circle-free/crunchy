@@ -13,6 +13,7 @@ import BrushIcon from '@material-ui/icons/Brush';
 import PanToolIcon from '@material-ui/icons/PanTool';
 import SyncIcon from '@material-ui/icons/Sync';
 import PublishIcon from '@material-ui/icons/Publish';
+import InfoIcon from '@material-ui/icons/Info';
 import './App.css';
 
 import Node from './p2p-node';
@@ -81,6 +82,17 @@ function App() {
     },
     [node],
   );
+
+  const handleIpfs = useCallback(async () => {
+    if (!node) return;
+
+    await node.savePathsToIpfs();
+
+    // await node.loadPathsFromIpfs();
+    // await node.savePathsToLocal();
+
+    // await node.deletePathsFromIpfs();
+  }, [node]);
 
   // Draw
   useEffect(() => {
@@ -208,6 +220,9 @@ function App() {
           {/* <IconButton color="secondary" onClick={handleClear}>
             <ClearIcon />
           </IconButton> */}
+          <IconButton color="secondary" onClick={handleIpfs}>
+            <InfoIcon />
+          </IconButton>
           <IconButton color="secondary" onClick={handleUndo}>
             <UndoIcon />
           </IconButton>
