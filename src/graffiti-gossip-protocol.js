@@ -34,7 +34,7 @@ class PubSub extends EventEmitter {
         }
 
         if (message.type === MessageType.GRAPH_CID) {
-          this.emit('cid', { from: message.from, cid: message.cid });
+          this.emit('cid', { from: message.from, wallId: message.wallId, cid: message.cid });
           return;
         }
       } catch (err) {
@@ -57,8 +57,8 @@ class PubSub extends EventEmitter {
     }
   }
 
-  async sendPath({ id, data, predecessorIds }) {
-    const { payload } = new Message(MessageType.PATH, { id, data, predecessorIds });
+  async sendPath({ wallId, id, data, predecessorIds }) {
+    const { payload } = new Message(MessageType.PATH, { wallId, id, data, predecessorIds });
 
     try {
       await this.pubsub.publish(this.TOPIC, payload);
@@ -67,8 +67,8 @@ class PubSub extends EventEmitter {
     }
   }
 
-  async sendCid({ cid }) {
-    const { payload } = new Message(MessageType.GRAPH_CID, cid);
+  async sendCid({ wallId, cid }) {
+    const { payload } = new Message(MessageType.GRAPH_CID, { wallId, cid });
 
     try {
       await this.pubsub.publish(this.TOPIC, payload);

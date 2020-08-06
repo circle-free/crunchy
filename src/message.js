@@ -13,6 +13,7 @@ class Message {
         this.payload = Request.encode({
           type,
           path: {
+            wallId: data.wallId,
             id: data.id,
             data: data.data,
             predecessorIds: data.predecessorIds,
@@ -29,12 +30,34 @@ class Message {
         });
 
         break;
-      case Request.Type.SYNC_REQUEST:
-        this.payload = Request.encode({ type, syncRequest: { ids: data } });
+      case Request.Type.PATH_SYNC_REQUEST:
+        this.payload = Request.encode({
+          type,
+          pathSyncRequest: {
+            wallId: data.wallId,
+            ids: data.ids,
+          }
+        });
 
         break;
-      case Request.Type.GRAPH_CID:
-        this.payload = Request.encode({ type, graphCid: { cid: data } });
+      case Request.Type.WALL_SYNC_REQUEST:
+        this.payload = Request.encode({
+          type,
+          wallSyncRequest: {
+            wallIds: data.wallIds,
+            cids: data.cids,
+          }
+        });
+
+        break;
+      case Request.Type.WALL_CID:
+        this.payload = Request.encode({
+          type,
+          wallCid: {
+            wallId: data.wallId,
+            cid: data.cid,
+          }
+        });
 
         break;
       default:
@@ -52,8 +75,9 @@ class Message {
 
       switch (request.type) {
         case Request.Type.PATH:
-          const { id, data, predecessorIds } = request.path;
+          const { wallId, id, data, predecessorIds } = request.path;
           message.path = {
+            wallId: wallId.toString(),
             id: id.toString(),
             data: data.toString(),
             predecessorIds: predecessorIds.map(id => id.toString()),
@@ -64,12 +88,19 @@ class Message {
           message.name = request.updatePeer.userHandle.toString();
 
           break;
-        case Request.Type.SYNC_REQUEST:
-          message.ids = request.syncRequest.ids.map(id => id.toString());
+        case Request.Type.PATH_SYNC_REQUEST:
+          message.wallId = request.pathSyncRequest.wallId.toString();
+          message.ids = request.pathSyncRequest.ids.map(id => id.toString());
 
           break;
-        case Request.Type.GRAPH_CID:
-          message.cid = request.graphCid.cid.toString();
+        case Request.Type.WALL_SYNC_REQUEST:
+          message.wallIds = request.wallSyncRequest.wallIds.map(wallId => wallId.toString());
+          message.ids = request.wallSyncRequest.ids.map(id => id.toString());
+
+          break;
+        case Request.Type.WALL_CID:
+          message.wallId = request.wallCid.wallId.toString();
+          message.cid = request.wallCid.cid.toString();
 
           break;
         default:

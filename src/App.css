@@ -68,3 +68,11 @@
 .color-picker {
   margin-top: 10px;
 }
+
+.app-bar {
+  position: 'relative';
+}
+
+.title {
+  flex: 1;
+}

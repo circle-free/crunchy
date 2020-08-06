@@ -8,19 +8,22 @@ const onSyncReqGeneratorWith = (connection, getPathsNotInList) => source =>
   (async function* () {
     const peerId = connection.remotePeer.toB58String();
 
+    // TODO: also send known wallIds
+
     for await (const message of source) {
-      const { type, ids } = Message.fromPayload({ from: peerId, data: message._bufs[0] });
+      const { type, wallId, ids } = Message.fromPayload({ from: peerId, data: message._bufs[0] });
 
-      if (type !== MessageType.SYNC_REQUEST) return;
+      if (type !== MessageType.PATH_SYNC_REQUEST) return;
 
-      console.info(`Received a sync request from ${peerId}.`);
+      console.info(`Received a sync request from ${peerId} for wall ${wallId}.`);
 
-      const paths = getPathsNotInList(ids);
+      const paths = getPathsNotInList(wallId, ids);
 
-      console.info(`Sending ${paths.length} paths to ${peerId}`);
+      console.info(`Sending ${paths.length} paths to ${peerId} for wall ${wallId}`);
 
       for (const path of paths) {
-        const { payload } = new Message(MessageType.PATH, path);
+        const { id, data, predecessorIds } = path;
+        const { payload } = new Message(MessageType.PATH, { wallId, id, data, predecessorIds });
         yield payload;
       }
     }
@@ -39,8 +42,8 @@ class DirectMessaging extends EventEmitter {
     return ({ connection, stream }) => pipe(stream, onSyncReqGeneratorWith(connection, getPathsNotInList), stream).catch(console.error);
   }
 
-  sendSyncRequest({ stream, idsWeHave = [], cb }) {
-    const { payload } = new Message(MessageType.SYNC_REQUEST, idsWeHave);
+  sendSyncRequest({ stream, wallId, idsWeHave = [], cb }) {
+    const { payload } = new Message(MessageType.PATH_SYNC_REQUEST, { wallId, ids: idsWeHave });
 
     let pathCount = 0;
 
@@ -58,15 +61,15 @@ class DirectMessaging extends EventEmitter {
     }).catch(console.error);
   }
 
-  tryGetFromPeer(connection, idsWeHave) {
+  tryGetFromPeer(connection, { wallId, idsWeHave }) {
     const peerId = connection.remotePeer.toB58String();
-    console.info(`Sending sync request to ${peerId}`);
+    console.info(`Sending sync request to ${peerId}. Current wall ${wallId}.`);
 
     const cb = path => this.emit('path', { from: peerId, path });
 
-    connection
+    return connection
       .newStream([this.PROTOCOL])
-      .then(({ stream }) => this.sendSyncRequest({ stream, idsWeHave, cb }))
+      .then(({ stream }) => this.sendSyncRequest({ stream, wallId, idsWeHave, cb }))
       .catch(console.error);
   }
 }

@@ -21,7 +21,6 @@ import Gossipsub from 'libp2p-gossipsub';
 
 // Datastores
 import LocalDatastore from './data-store';
-import GraphDatastore from './graph-store';
 
 // Protocol Handlers
 import GraffitiGossip from './graffiti-gossip-protocol';
@@ -34,11 +33,13 @@ import getOrCreatePeerId from './peer-id';
 import { Graph, json as jsonGraph, alg } from '@dagrejs/graphlib';
 
 const EventEmitter = require('events');
+const { uuid } = require('uuidv4');
 
 const DAG_START = 'DAG_START';
 const MAX_PREDECESSORS = 3;
 const DAG_STORE_KEY = 'DAG_STORE_KEY';
-const DAG_IPFS_KEY = 'DAG_IPFS_KEY';
+const DEFAULT_WALL_ID = 'DEFAULT_WALL_ID';
+const GLOBAL_USER = 'GLOBAL_USER';
 
 const IPFS = require('ipfs');
 const all = require('it-all');
@@ -88,7 +89,7 @@ const getCompletePathIdsFromGraph = graph => {
   return graph.nodes().filter(id => graph.node(id) && id !== DAG_START);
 };
 
-const getPathsNotInList = graph => ids => {
+const getPathsNotInList = (graph, ids) => {
   const idSet = new Set(ids);
 
   return graph
@@ -118,18 +119,24 @@ class Node extends EventEmitter {
   constructor() {
     super();
 
-    this.pathDataStore = new LocalDatastore('graffitiPaths');
+    this.wallDataStore = new LocalDatastore('graffitiWalls');
     this.nodeDataStore = new LocalDatastore('graffitiNode');
-    this.graphDataStore = new GraphDatastore(this.graph);
+    this.cidDataStore = new LocalDatastore('graffitiCids');
 
     this.storeDebounceTimer = null;
+
+    this.walls = {};
+    this.currentWallId = null;
   }
 
   async start() {
-    this.graph = await this.pathDataStore
+    const defaultGraph = await this.wallDataStore
       .has(DAG_STORE_KEY)
-      .then(hasStore => (hasStore ? this.pathDataStore.get(DAG_STORE_KEY) : null))
-      .then(sGraph => (sGraph ? jsonGraph.read(sGraph) : new Graph({ directed: true }).setNode(DAG_START)));
+      .then(hasStore => (hasStore ? this.wallDataStore.get(DEFAULT_WALL_ID) : null))
+      .then(sGraph => (sGraph ? jsonGraph.read(sGraph) : (new Graph({ directed: true })).setNode(DAG_START)));
+    
+    this.walls[DEFAULT_WALL_ID] = { graph: defaultGraph, user: GLOBAL_USER, cid: null };
+    this.currentWallId = DEFAULT_WALL_ID;
 
     this.peerId = await getOrCreatePeerId();
 
@@ -195,8 +202,8 @@ class Node extends EventEmitter {
     });
 
     // Listen for cids from Gossip
-    this.graffitiGossip.on('cid', ({ from, cid }) => {
-      console.info(`${from} sent cid ${cid}.`);
+    this.graffitiGossip.on('cid', ({ from, wallId, cid }) => {
+      console.info(`${from} sent cid ${cid} for wall ${wallId}.`);
     });
 
     // Create direct protocol manager here
@@ -206,14 +213,19 @@ class Node extends EventEmitter {
     this.graffitiDirect.on('path', ({ from, path }) => this.receivePath(from, path));
 
     // Handle graffiti direct communication requests from peers
-    this.libp2p.handle(this.graffitiDirect.PROTOCOL, this.graffitiDirect.handleWith(getPathsNotInList(this.graph)));
+    const getMissingPaths = (wallId, ids) => this.walls[wallId] ? getPathsNotInList(this.walls[wallId].graph, ids) : [];
+
+    this.libp2p.handle(this.graffitiDirect.PROTOCOL, this.graffitiDirect.handleWith(getMissingPaths));
 
     this.libp2p.peerStore.on('change:protocols', async ({ peerId, protocols }) => {
       if (!protocols.includes(this.graffitiDirect.PROTOCOL)) return;
 
       const connection = this.libp2p.connectionManager.get(peerId);
-      const idsWeHave = getCompletePathIdsFromGraph(this.graph);
-      this.graffitiDirect.tryGetFromPeer(connection, idsWeHave);
+
+      // TODO: this sync is limited to wall, we wnt to sync wallIds -> cid too
+
+      const idsWeHave = getCompletePathIdsFromGraph(this.walls[this.currentWallId].graph);
+      await this.graffitiDirect.tryGetFromPeer(connection, { wallId: this.currentWallId, idsWeHave });
     });
 
     await this.libp2p.start();
@@ -225,31 +237,39 @@ class Node extends EventEmitter {
 
     console.info('Started IPFS client Version:', version.version);
 
-    return getOrderedPaths(this.graph);
+    return getOrderedPaths(defaultGraph);
+  }
+
+  // TODO: implement
+  async setWallId() {
+
   }
 
   async receivePath(from, path) {
-    const { id, data, predecessorIds = [] } = path;
+    const { wallId, id, data, predecessorIds = [] } = path;
+
+    if (wallId !== this.currentWallId) return;
 
     if (this.storeDebounceTimer) {
       clearTimeout(this.storeDebounceTimer);
     }
 
-    this.storeDebounceTimer = setTimeout(() => this.savePathsToLocal(), 5000);
+    // TODO: this can get overwritten if wall currentWallId is not same as last receive wallId path
+    this.storeDebounceTimer = setTimeout(() => this.savePathsToLocal(wallId), 5000);
 
     const isMine = from === this.libp2p.peerId.toB58String();
     console.info(`Received path ${id} from ${isMine ? 'self' : from} with ${predecessorIds.length} predecessors.`);
 
     // TODO: validate here
     // TODO: do something with unknownIds (prune?, ignore?, fetch?)
-    const { predIds } = addTheirPathToGraph(this.graph, { id, data, predecessorIds });
+    const { predIds } = addTheirPathToGraph(this.walls[this.currentWallId].graph, { id, data, predecessorIds });
 
     this.emit('path', { id, data, predecessorIds: predIds });
   }
 
   async broadcastPath({ id, data }) {
     console.info('Adding path to local DAG.');
-    const result = addOurPathToGraph(this.graph, { id, data });
+    const result = addOurPathToGraph(this.walls[this.currentWallId].graph, { id, data });
 
     if (!result) return false;
 
@@ -257,7 +277,7 @@ class Node extends EventEmitter {
 
     try {
       console.info('Broadcasting path.');
-      await this.graffitiGossip.sendPath({ id, data, predecessorIds });
+      await this.graffitiGossip.sendPath({ wallId: this.currentWallId, id, data, predecessorIds });
       console.info('Path broadcasted.');
 
       return true;
@@ -269,37 +289,67 @@ class Node extends EventEmitter {
     }
   }
 
-  async savePathsToLocal() {
+  async savePathsToLocal(wallId) {
+    if (!this.walls[wallId]) return;
+
     console.info('Saving DAG to data store.');
-    return this.pathDataStore.put(DAG_STORE_KEY, jsonGraph.write(this.graph));
+    return this.wallDataStore.put(wallId, jsonGraph.write(this.walls[wallId].graph));
   }
 
-  async loadPathsFromIpfs() {
-    const cidString = await this.pathDataStore.get(DAG_IPFS_KEY);
+  async loadPathsFromIpfs(wallId) {
+    console.info(`Loading wall ${wallId} from IPFS.`);
+
+    const cidString = await this.cidDataStore.get(wallId);
     const serializedGraph = Buffer.concat(await all(this.ipfsNode.cat(cidString))).toString();
-    this.graph = jsonGraph.read(JSON.parse(serializedGraph));
-    console.info(`Loaded DAG from IPFS. Had ${this.graph.nodeCount() - 1} paths.`);
+    const graph = jsonGraph.read(JSON.parse(serializedGraph));
+    this.walls[wallId].graph = graph;
+
+    console.info(`Loaded wall ${wallId} from IPFS. Had ${graph.nodeCount() - 1} paths.`);
   }
 
-  async deletePathsFromIpfs() {
-    console.info('Removing DAG from IPFS.');
-    await this.ipfsNode.files.rm(`/graphiti`);
-    await this.pathDataStore.delete(DAG_IPFS_KEY);
-    console.info(`Removed graphiti DAG from IPFS.`);
+  async deletePathsFromIpfs(wallId) {
+    console.info(`Removing wall ${wallId} from IPFS.`);
+
+    await this.ipfsNode.files.rm(`/myGraphitiWalls/${wallId}`);
+    await this.cidDataStore.delete(wallId);
+
+    console.info(`Removing wall ${wallId} from IPFS.`);
   }
 
-  async savePathsToIpfs() {
-    console.info('Saving DAG to IPFS.');
-    const serializedGraph = JSON.stringify(jsonGraph.write(this.graph));
-    await this.ipfsNode.files.write('/graphiti', Buffer.from(serializedGraph), { mode: 744, create: true })
-    const cid = await this.ipfsNode.files.flush('/graphiti');
+  async savePathsToIpfs(wallId) {
+    console.info(`Saving wall ${wallId} to IPFS.`);
+
+    const graph = this.walls[wallId] ? this.walls[wallId].graph : await this.wallDataStore.get(wallId);
+
+    if (!graph) return;
+
+    const serializedGraph = JSON.stringify(jsonGraph.write(graph));
+    await this.ipfsNode.files.write(`/myGraphitiWalls/${wallId}`, Buffer.from(serializedGraph), { mode: 744, create: true, parents: true });
+
+    // TODO: what the hell is flush really though?
+    const cid = await this.ipfsNode.files.flush(`/myGraphitiWalls/${wallId}`);
     const cidString = cid.toString();
-    await this.pathDataStore.put(DAG_IPFS_KEY, cidString);
+    await this.cidDataStore.put(wallId, cidString);
+
     console.info(`Saved graphiti DAG as ${cidString} to IPFS.`);
 
     console.info('Broadcasting IPFS CID.');
-    await this.graffitiGossip.sendCid({ cid });
+    await this.graffitiGossip.sendCid({ wallId, cid });
     console.info('IPFS CID broadcasted.');
+
+    if (this.walls[wallId]) this.walls[wallId].cid = cidString;
+  }
+
+  async createWall(name) {
+    const id = uuid();
+    const user = this.peerId;
+
+
+    
+    // this.graph = (new Graph({ directed: true })).setNode(DAG_START)
+
+
+    return { id, name, user };
   }
 }
 

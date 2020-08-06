@@ -13,7 +13,23 @@ import BrushIcon from '@material-ui/icons/Brush';
 import PanToolIcon from '@material-ui/icons/PanTool';
 import SyncIcon from '@material-ui/icons/Sync';
 import PublishIcon from '@material-ui/icons/Publish';
-import InfoIcon from '@material-ui/icons/Info';
+import MenuIcon from '@material-ui/icons/Menu';
+import CloseIcon from '@material-ui/icons/Close';
+
+import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import ListItemText from '@material-ui/core/ListItemText';
+import ListItem from '@material-ui/core/ListItem';
+import List from '@material-ui/core/List';
+import Divider from '@material-ui/core/Divider';
+import AppBar from '@material-ui/core/AppBar';
+import Toolbar from '@material-ui/core/Toolbar';
+
+import TextField from '@material-ui/core/TextField';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
+
 import './App.css';
 
 import Node from './p2p-node';
@@ -68,11 +84,16 @@ function App() {
   const [autoSync, setAutoSync] = useState(false);
   const [pathDrawnListener, setPathDrawnListener] = useState(null);
 
+  // Drawer and Walls
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [walls, setWalls] = useState([{ id: '0', name: 'Default', user: 'Global' }, { id: '1', name: 'Cool Wall', user: 'Mike' }]);
+
   // Node
   const [node, setNode] = useState(null);
   // const [started, setStarted] = useState(false);
   // const [syncing, setSyncing] = useState(false);
-
+  
   const handleSendPath = useCallback(
     async svgPath => {
       if (!svgPath || !node) return;
@@ -83,16 +104,30 @@ function App() {
     [node],
   );
 
-  const handleIpfs = useCallback(async () => {
-    if (!node) return;
+  const handleDrawerToggle = useCallback(() => {
+    setDrawerOpen(!drawerOpen);
+  }, [setDrawerOpen, drawerOpen]);
 
-    await node.savePathsToIpfs();
+  const handleWallSelect = useCallback(id => {
+    console.log(`Wall ${1} clicked.`);
+    setDrawerOpen(!drawerOpen);
+  }, [setDrawerOpen, drawerOpen]);
 
-    // await node.loadPathsFromIpfs();
-    // await node.savePathsToLocal();
+  const handleCreateWall = useCallback(id => {
+    console.log(`Wall create clicked.`);
+    setCreateOpen(!createOpen);
+  }, [setCreateOpen, createOpen]);
 
-    // await node.deletePathsFromIpfs();
-  }, [node]);
+  const handleCreateClose = useCallback(() => {
+    console.log(`Wall create canceled.`);
+    setCreateOpen(!createOpen);
+  }, [setCreateOpen, createOpen]);
+
+  const handleCreateConfirm = useCallback(() => {
+    console.log(`Wall create confirmed.`);
+    setDrawerOpen(!drawerOpen);
+    setCreateOpen(!createOpen);
+  }, [setDrawerOpen, drawerOpen, setCreateOpen, createOpen]);
 
   // Draw
   useEffect(() => {
@@ -220,8 +255,8 @@ function App() {
           {/* <IconButton color="secondary" onClick={handleClear}>
             <ClearIcon />
           </IconButton> */}
-          <IconButton color="secondary" onClick={handleIpfs}>
-            <InfoIcon />
+          <IconButton color="secondary" onClick={handleDrawerToggle}>
+            <MenuIcon />
           </IconButton>
           <IconButton color="secondary" onClick={handleUndo}>
             <UndoIcon />
@@ -269,6 +304,38 @@ function App() {
 
         <ChromePicker className="color-picker" color={penColor} onChangeComplete={handleChangePenColor} />
       </div>
+
+      <Dialog fullScreen open={drawerOpen} onClose={handleDrawerToggle}>
+        <AppBar className="appBar" color="secondary">
+          <Toolbar>
+            <IconButton edge="start" onClick={handleDrawerToggle}><CloseIcon /></IconButton>
+            <Typography variant="h6" className="title" align="center">Walls</Typography>
+            <Button autoFocus color="inherit" onClick={handleCreateWall}>Create</Button>
+          </Toolbar>
+        </AppBar>
+        <Toolbar></Toolbar>
+        <List>
+          {walls.map(({ id, name, user }) => (
+            <Fragment key={id}>
+              <ListItem button onClick={() => handleWallSelect(id)}>
+                <ListItemText primary={name} secondary={user} />
+              </ListItem>
+              <Divider />
+            </Fragment>
+          ))}
+        </List>
+      </Dialog>
+
+      <Dialog open={createOpen} onClose={handleCreateClose}>
+        <DialogTitle>Give Your Wall A Name</DialogTitle>
+        <DialogContent>
+          <TextField autoFocus margin="dense" id="name" label="Wall Name" fullWidth color="secondary"/>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCreateClose} color="secondary">Cancel</Button>
+          <Button onClick={handleCreateConfirm} color="secondary">Create</Button>
+        </DialogActions>
+      </Dialog>
     </Fragment>
   );
 }
