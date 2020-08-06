@@ -120,7 +120,7 @@ export class SvgDrawing extends Renderer {
       this._clearPointListener,
       this._clearMouseListener,
       this._clearTouchListener,
-    ].map((clear) => {
+    ].forEach((clear) => {
       if (!clear) return
       clear()
       clear = null
@@ -129,6 +129,19 @@ export class SvgDrawing extends Renderer {
 
   public insertPath(pathString: string): void {
     this.importPath(pathString);
+    this.update();
+  }
+
+  public insertPaths(pathStrings: string[]): void {
+    this.importPaths(pathStrings);
+    this.update();
+  }
+
+  public insertPathAbove(pathString: string, preIds: string[]): void {
+    this.importPathAbove(pathString, preIds);
+
+    // TODO: consider checking if update is even necessary
+
     this.update();
   }
 

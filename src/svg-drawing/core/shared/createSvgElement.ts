@@ -13,11 +13,11 @@ export const createSvgElement = (attrs: Attrs, childs: SVGElement[]): SVGSVGElem
   
   Object.keys(attrs)
     .sort()
-    .map((key: string) => {
+    .forEach((key: string) => {
       svg.setAttribute(key, attrs[key]);
     });
 
-  childs.map((el: SVGElement) => {
+  childs.forEach((el: SVGElement) => {
     svg.appendChild(el);
   });
 
@@ -28,7 +28,7 @@ export const createSvgChildElement = (elname: string, attrs: Attrs): SVGElement 
   const path = document.createElementNS(SVG_NS, elname);
   Object.keys(attrs)
     .sort()
-    .map((key: string) => {
+    .forEach((key: string) => {
       path.setAttribute(key, attrs[key]);
     });
   return path;

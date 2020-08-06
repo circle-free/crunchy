@@ -1,12 +1,10 @@
-'use strict';
-
 import Message, { MessageType } from './message';
 
 const EventEmitter = require('events');
 
 class PubSub extends EventEmitter {
   TOPIC = 'graffiti/gossip/1.0.0';
-  
+
   constructor(pubsub) {
     super();
 
@@ -20,8 +18,6 @@ class PubSub extends EventEmitter {
         if (this.subscribers.has(peerStringId)) return;
 
         this.subscribers.add(peerStringId);
-
-        // TODO: send subscriber sync_req
       });
 
       try {
@@ -56,8 +52,8 @@ class PubSub extends EventEmitter {
     }
   }
 
-  async sendPath(path) {
-    const { payload } = new Message(MessageType.PATH, path);
+  async sendPath({ id, data, predecessorIds }) {
+    const { payload } = new Message(MessageType.PATH, { id, data, predecessorIds });
 
     try {
       await this.pubsub.publish(this.TOPIC, payload);

@@ -35,7 +35,7 @@ const idJSON = require('../id.json');
 const GraffitiGossip = require('./graffiti-gossip-protocol');
 
 // const { SIGNALING_SERVER_PORT = 15555, TCP_PORT = 63785, WS_PORT = 63786 } = process.env;    // Local SS
-const { TCP_PORT = 63785, WS_PORT = 63786 } = process.env;   // Hosted SS
+const { TCP_PORT = 63785, WS_PORT = 63786 } = process.env; // Hosted SS
 
 (async () => {
   const peerId = await PeerId.createFromJSON(idJSON);
@@ -44,10 +44,10 @@ const { TCP_PORT = 63785, WS_PORT = 63786 } = process.env;   // Hosted SS
   const addrs = [`/ip4/0.0.0.0/tcp/${TCP_PORT}`, `/ip4/0.0.0.0/tcp/${WS_PORT}/ws`];
 
   // const signalingServer = await SignalingServer.start({ port: SIGNALING_SERVER_PORT });    // uncomment if hosting Local SS
-  
+
   // const ssAddr = `/ip4/${signalingServer.info.host}/tcp/${signalingServer.info.port}/ws/p2p-webrtc-star`;    // Local SS
-  const ssAddr = `/dns4/wrtc-star1.par.dwebops.pub/tcp/443/wss/p2p-webrtc-star`   // Hosted SS
-  
+  const ssAddr = `/dns4/wrtc-star1.par.dwebops.pub/tcp/443/wss/p2p-webrtc-star`; // Hosted SS
+
   // console.info(`Signaling server running at ${ssAddr}`);    // uncomment if hosting Local SS
   addrs.push(`${ssAddr}/p2p/${peerId.toB58String()}`);
 

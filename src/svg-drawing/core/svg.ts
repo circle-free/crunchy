@@ -6,8 +6,6 @@ import { createSvgElement, createSvgChildElement } from './shared/createSvgEleme
 import { download } from './shared/download'
 import { uuid } from './shared/uuidv4'
 
-const isNaN = (num: number) => num !== num
-
 export class Point {
   public x: number;
   public y: number;
@@ -312,7 +310,8 @@ export class Path {
 
   public clone(): Path {
     const path = new Path(this.attrs);
-    this.commands.map((c) => {
+
+    this.commands.forEach((c) => {
       path.commands.push(c.clone())
     });
 
@@ -362,6 +361,12 @@ export class Svg {
     } else {
       this.paths.push(pa);
     }
+
+    return this;
+  }
+
+  public addPathAt(pa: Path, index: number): this {
+    this.paths = this.paths.slice(0, index).concat(pa).concat(this.paths.slice(index));
 
     return this;
   }
@@ -426,6 +431,32 @@ export class Svg {
 
     this.removePath(path.attrs.id);
     this.addPath(path);
+
+    return this;
+  }
+
+  public importPaths(pathStrings: string[]): this {
+    const paths = pathStrings.map(Path.fromString).filter(path => path.attrs.id);
+
+    if (!paths.length) return this;
+
+    paths.forEach(path => path.attrs.id && this.removePath(path.attrs.id));
+
+    this.addPath(paths);
+
+    return this;
+  }
+
+  public importPathAbove(pathString: string, predIds: string[]): this {
+    const path = Path.fromString(pathString);
+
+    if (!path.attrs.id) return this;
+
+    this.removePath(path.attrs.id);
+
+    const index = this.paths.reduce((lastIndex: number, path, i: number): number => (path.attrs.id && predIds.includes(path.attrs.id) && (i >= lastIndex)) ? i + 1 : lastIndex, 0);
+
+    this.addPathAt(path, index);
 
     return this;
   }
