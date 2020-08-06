@@ -1,0 +1,42 @@
+{
+  "name": "solidity-starter",
+  "version": "1.0.0",
+  "description": "Starter codes for solidity smart contracts project with truffle, ganache-cli, solhint and solidity-prettier",
+  "main": "",
+  "scripts": {
+    "test": "truffle test",
+    "ganache": "ganache-cli",
+    "postinstall": "npm run compile",
+    "compile": "truffle compile --all",
+    "lint": "solhint 'contracts/**/*.sol'",
+    "prettier": "prettier --write 'contracts/**/*.sol'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coinsquare/solidity-starter.git"
+  },
+  "keywords": [
+    "solidity",
+    "ethereum",
+    "smart contract",
+    "starter"
+  ],
+  "author": "Coinsquare",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/coinsquare/solidity-starter/issues"
+  },
+  "homepage": "https://github.com/coinsquare/solidity-starter#readme",
+  "dependencies": {
+    "truffle": "^5.1.36"
+  },
+  "devDependencies": {
+    "ganache-cli": "^6.9.1",
+    "prettier": "^2.0.5",
+    "prettier-plugin-solidity": "^1.0.0-alpha.55",
+    "solhint": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=10.13.0"
+  }
+}
