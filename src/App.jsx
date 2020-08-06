@@ -27,7 +27,7 @@ const DEFAULT_PEN_CLOSE = false;
 const DEFAULT_PEN_FILL = 'none';
 const DEFAULT_CANVAS_GRID = true;
 
-const area = path => path.getTotalLength() * Number(path.getAttribute('stroke-width'));
+// const area = path => path.getTotalLength() * Number(path.getAttribute('stroke-width'));
 
 const lattice = s => `
   repeating-linear-gradient(
@@ -69,8 +69,18 @@ function App() {
 
   // Node
   const [node, setNode] = useState(null);
-  const [started, setStarted] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  // const [started, setStarted] = useState(false);
+  // const [syncing, setSyncing] = useState(false);
+
+  const handleSendPath = useCallback(
+    async svgPath => {
+      if (!svgPath || !node) return;
+
+      // TODO: handle removal if not success (const success = await node...)
+      await node.broadcastPath({ id: svgPath.id, data: svgPath.outerHTML });
+    },
+    [node],
+  );
 
   // Draw
   useEffect(() => {
@@ -82,11 +92,11 @@ function App() {
     }
 
     if (!pathDrawnListener && node && autoSync) {
-      const callback = sendPath;
+      const callback = handleSendPath;
       draw.onPathDrawn(callback);
       setPathDrawnListener(() => callback);
     }
-  }, [draw, pathDrawnListener, node]);
+  }, [draw, pathDrawnListener, node, autoSync, handleSendPath]);
 
   // Node
   useEffect(() => {
@@ -97,46 +107,42 @@ function App() {
     setNode(p2pNode);
 
     // Subscribe to events
-    p2pNode.on('path', ({ id, data, prevId }) => {
-      // TODO: Handle looking for id and prevId
-      draw.insertPath(data);
+    p2pNode.on('path', ({ id, data, predecessorIds }) => {
+      console.info(`Inserting ${id} above ${predecessorIds.join(' ')}`);
+      draw.insertPathAbove(data, predecessorIds);
       console.log('Path inserted.');
     });
 
     p2pNode.start().then(paths => {
-      paths.map(({ data }) => draw.insertPath(data));
-      console.info('P2P node instance started.');
+      console.info(`P2P node instance started. ${paths.length} paths loaded.`);
+      draw.insertPaths(paths.map(({ data }) => data));
     });
   }, [node, draw]);
-
-  const sendPath = async svgPath => {
-    if (!svgPath || !node) return;
-
-    // TODO: handle prevId
-    await node.broadcastPath({ id: svgPath.id, data: svgPath.outerHTML, prevId: "prevId" });
-  };
 
   // Draw logic start
   const handleToggleGrid = useCallback(() => {
     setGrid(!grid);
   }, [grid]);
 
-  const handleClear = useCallback(() => {
-    draw.clear();
-  }, [draw]);
+  // const handleClear = useCallback(() => {
+  //   draw.clear();
+  // }, [draw]);
 
   const handleUndo = useCallback(() => {
     draw.undo();
   }, [draw]);
 
-  const handleChangeRadius = useCallback((_, value) => {
+  const handleChangeRadius = useCallback(
+    (_, value) => {
       const num = Number(value);
 
       if (Number.isNaN(num)) return;
 
       draw.changePenWidth(num);
       setRadius(num);
-    }, [draw]);
+    },
+    [draw],
+  );
 
   const handleToggleSmoothing = useCallback(() => {
     draw.changeCurve(!smoothing);
@@ -148,28 +154,37 @@ function App() {
     setDrawing(!drawing);
   }, [draw, drawing]);
 
-  const handleChangeSampleRate = useCallback((_, value) => {
+  const handleChangeSampleRate = useCallback(
+    (_, value) => {
       const num = Number(value);
 
       if (Number.isNaN(num)) return;
 
       draw.changeDelay(num);
       setSampleRate(num);
-    }, [draw]);
+    },
+    [draw],
+  );
 
-  const handleChangePenColor = useCallback(color => {
+  const handleChangePenColor = useCallback(
+    color => {
       draw.changePenColor(color.hex);
       setPenColor(color.hex);
-    }, [draw]);
+    },
+    [draw],
+  );
 
-  const handleDownload = useCallback(extension => e => {
-      // console.log(draw.getSvgXML());
-      draw.download(extension);
-    }, [draw]);
+  // const handleDownload = useCallback(
+  //   extension => e => {
+  //     // console.log(draw.getSvgXML());
+  //     draw.download(extension);
+  //   },
+  //   [draw],
+  // );
 
   const handlePublish = useCallback(() => {
-    draw.getDrawnPaths().map(sendPath);
-  }, [draw]);
+    draw.getDrawnPaths().map(handleSendPath);
+  }, [draw, handleSendPath]);
 
   const handleToggleSync = useCallback(() => {
     if (!autoSync) handlePublish();

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, MutableRefObject } from 'react';
+import { useRef, useEffect, useCallback, MutableRefObject } from 'react';
 import { SvgDrawing, DrawingOption } from '../core';
 
 interface UseSvgDrawing {
@@ -14,6 +14,8 @@ interface UseSvgDrawing {
   getSvgXML: () => string | null;
   download: (ext: 'svg' | 'png' | 'jpg') => void;
   insertPath: (pathString: string) => void;
+  insertPaths: (pathStrings: string[]) => void;
+  insertPathAbove: (pathString: string, preIds: string[]) => void;
   getDrawnPaths: () => any[] | undefined;
   on: () => void;
   off: () => void;
@@ -91,6 +93,18 @@ export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObjec
     drawingRef.current.insertPath(pathString);
   }, []);
 
+  const insertPaths = useCallback((pathStrings: string[]) => {
+    if (!drawingRef.current) return;
+    
+    drawingRef.current.insertPaths(pathStrings);
+  }, []);
+
+  const insertPathAbove = useCallback((pathString: string, preIds: string[]) => {
+    if (!drawingRef.current) return;
+    
+    drawingRef.current.insertPathAbove(pathString, preIds);
+  }, []);
+
   const getDrawnPaths = useCallback(() => {
     if (!drawingRef.current) return;
 
@@ -144,6 +158,8 @@ export const useSvgDrawing = (option?: Partial<DrawingOption>): [MutableRefObjec
       clear,
       undo,
       insertPath,
+      insertPaths,
+      insertPathAbove,
       getDrawnPaths,
       getSvgXML,
       download,

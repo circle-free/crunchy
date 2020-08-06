@@ -2,11 +2,9 @@ import Message, { MessageType } from './message';
 
 const pipe = require('it-pipe');
 
-const textDecoder = new TextDecoder('utf-8');
-
 const EventEmitter = require('events');
 
-const onSyncReqGeneratorWith = (connection, store) => source =>
+const onSyncReqGeneratorWith = (connection, getPathsNotInList) => source =>
   (async function* () {
     const peerId = connection.remotePeer.toB58String();
 
@@ -17,9 +15,7 @@ const onSyncReqGeneratorWith = (connection, store) => source =>
 
       console.info(`Received a sync request from ${peerId}.`);
 
-      const idSet = new Set(ids);
-      const keyValuePairs = (await store.all()).filter(({ key }) => !idSet.has(key));
-      const paths = keyValuePairs.map(({ key, value }) => ({ id: key, data: value.data, prevId: value.prevId }));
+      const paths = getPathsNotInList(ids);
 
       console.info(`Sending ${paths.length} paths to ${peerId}`);
 
@@ -32,20 +28,19 @@ const onSyncReqGeneratorWith = (connection, store) => source =>
 
 class DirectMessaging extends EventEmitter {
   PROTOCOL = 'graffiti/direct/1.0.0';
-  
+
   constructor(libp2p) {
     super();
 
     this.libp2p = libp2p;
   }
 
-  handleWith(store) {
-    return ({ connection, stream }) =>
-      pipe(stream, onSyncReqGeneratorWith(connection, store), stream).catch(console.error);
+  handleWith(getPathsNotInList) {
+    return ({ connection, stream }) => pipe(stream, onSyncReqGeneratorWith(connection, getPathsNotInList), stream).catch(console.error);
   }
 
-  sendSyncRequest({ stream, ids = [], cb }) {
-    const { payload } = new Message(MessageType.SYNC_REQUEST, ids);
+  sendSyncRequest({ stream, idsWeHave = [], cb }) {
+    const { payload } = new Message(MessageType.SYNC_REQUEST, idsWeHave);
 
     let pathCount = 0;
 
@@ -63,13 +58,15 @@ class DirectMessaging extends EventEmitter {
     }).catch(console.error);
   }
 
-  tryGetFromPeer(connection, store) {
+  tryGetFromPeer(connection, idsWeHave) {
     const peerId = connection.remotePeer.toB58String();
     console.info(`Sending sync request to ${peerId}`);
+
     const cb = path => this.emit('path', { from: peerId, path });
 
-    Promise.all([connection.newStream([this.PROTOCOL]), store.keys()])
-      .then(([{ stream }, ids]) => this.sendSyncRequest({ stream, ids, cb }))
+    connection
+      .newStream([this.PROTOCOL])
+      .then(({ stream }) => this.sendSyncRequest({ stream, idsWeHave, cb }))
       .catch(console.error);
   }
 }
