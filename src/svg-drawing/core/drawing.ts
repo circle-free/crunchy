@@ -120,7 +120,7 @@ export class SvgDrawing extends Renderer {
       this._clearPointListener,
       this._clearMouseListener,
       this._clearTouchListener,
-    ].map((clear) => {
+    ].forEach((clear) => {
       if (!clear) return
       clear()
       clear = null

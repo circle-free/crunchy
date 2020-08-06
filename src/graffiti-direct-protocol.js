@@ -32,7 +32,7 @@ const onSyncReqGeneratorWith = (connection, store) => source =>
 
 class DirectMessaging extends EventEmitter {
   PROTOCOL = 'graffiti/direct/1.0.0';
-  
+
   constructor(libp2p) {
     super();
 
@@ -40,12 +40,11 @@ class DirectMessaging extends EventEmitter {
   }
 
   handleWith(store) {
-    return ({ connection, stream }) =>
-      pipe(stream, onSyncReqGeneratorWith(connection, store), stream).catch(console.error);
+    return ({ connection, stream }) => pipe(stream, onSyncReqGeneratorWith(connection, store), stream).catch(console.error);
   }
 
-  sendSyncRequest({ stream, ids = [], cb }) {
-    const { payload } = new Message(MessageType.SYNC_REQUEST, ids);
+  sendSyncRequest({ stream, idsWeHave = [], cb }) {
+    const { payload } = new Message(MessageType.SYNC_REQUEST, idsWeHave);
 
     let pathCount = 0;
 
@@ -63,13 +62,14 @@ class DirectMessaging extends EventEmitter {
     }).catch(console.error);
   }
 
-  tryGetFromPeer(connection, store) {
+  tryGetFromPeer(connection, idsWeHave) {
     const peerId = connection.remotePeer.toB58String();
     console.info(`Sending sync request to ${peerId}`);
+
     const cb = path => this.emit('path', { from: peerId, path });
 
-    Promise.all([connection.newStream([this.PROTOCOL]), store.keys()])
-      .then(([{ stream }, ids]) => this.sendSyncRequest({ stream, ids, cb }))
+    connection.newStream([this.PROTOCOL])
+      .then(({ stream }) => this.sendSyncRequest({ stream, idsWeHave, cb }))
       .catch(console.error);
   }
 }

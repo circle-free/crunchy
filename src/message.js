@@ -1,4 +1,4 @@
-import { Request, Stats } from './proto';
+import { Request } from './proto';
 
 class Message {
   constructor(type, data) {
@@ -14,17 +14,14 @@ class Message {
           path: {
             id: data.id,
             data: data.data,
-            prevId: data.prevId,
+            predecessorIds: data.predecessorIds,
           },
         });
 
         break;
-      case Request.Type.STATS:
-        this.payload = Request.encode({ type, stats: data });
-        break;
       case Request.Type.UPDATE_PEER:
         this.payload = Request.encode({
-          type: Request.Type.UPDATE_PEER,
+          type,
           updatePeer: {
             userHandle: Buffer.from(data),
           },
@@ -32,7 +29,12 @@ class Message {
 
         break;
       case Request.Type.SYNC_REQUEST:
-        this.payload = Request.encode({ type, syncRequest: { ids: data } });
+        this.payload = Request.encode({
+          type,
+          syncRequest: {
+            ids: data
+          }
+        });
 
         break;
       default:
@@ -41,7 +43,8 @@ class Message {
   }
 
   static fromPayload(payload) {
-    const { from, data, seqno, topicIDs, signature, key } = payload;
+    // const { from, data, seqno, topicIDs, signature, key } = payload;
+    const { from, data } = payload;
 
     // TODO: see what's in there
 
@@ -51,21 +54,21 @@ class Message {
 
       switch (request.type) {
         case Request.Type.PATH:
-          const { id, data, prevId } = request.path;
+          const { id, data, predecessorIds } = request.path;
           message.path = {
             id: id.toString(),
             data: data.toString(),
-            prevId: prevId.toString()
+            predecessorIds: predecessorIds.map(id => id.toString()),
           };
+
           break;
         case Request.Type.UPDATE_PEER:
           message.name = request.updatePeer.userHandle.toString();
-          break;
-        case Request.Type.STATS:
-          message.stats = request.stats;
+
           break;
         case Request.Type.SYNC_REQUEST:
           message.ids = request.syncRequest.ids.map(id => id.toString());
+
           break;
         default:
           return null;
@@ -84,4 +87,3 @@ class Message {
 
 export default Message;
 export const MessageType = Request.Type;
-export const NodeType = Stats.NodeType;

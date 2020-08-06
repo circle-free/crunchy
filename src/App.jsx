@@ -97,14 +97,14 @@ function App() {
     setNode(p2pNode);
 
     // Subscribe to events
-    p2pNode.on('path', ({ id, data, prevId }) => {
-      // TODO: Handle looking for id and prevId
+    p2pNode.on('path', ({ id, data, predecessorIds }) => {
+      // TODO: Handle looking for id and predecessorIds
       draw.insertPath(data);
       console.log('Path inserted.');
     });
 
     p2pNode.start().then(paths => {
-      paths.map(({ data }) => draw.insertPath(data));
+      // paths.map(({ data }) => draw.insertPath(data));
       console.info('P2P node instance started.');
     });
   }, [node, draw]);
@@ -112,8 +112,8 @@ function App() {
   const sendPath = async svgPath => {
     if (!svgPath || !node) return;
 
-    // TODO: handle prevId
-    await node.broadcastPath({ id: svgPath.id, data: svgPath.outerHTML, prevId: "prevId" });
+    // TODO: handle removal if not success
+    const success = await node.broadcastPath({ id: svgPath.id, data: svgPath.outerHTML });
   };
 
   // Draw logic start
@@ -129,14 +129,17 @@ function App() {
     draw.undo();
   }, [draw]);
 
-  const handleChangeRadius = useCallback((_, value) => {
+  const handleChangeRadius = useCallback(
+    (_, value) => {
       const num = Number(value);
 
       if (Number.isNaN(num)) return;
 
       draw.changePenWidth(num);
       setRadius(num);
-    }, [draw]);
+    },
+    [draw],
+  );
 
   const handleToggleSmoothing = useCallback(() => {
     draw.changeCurve(!smoothing);
@@ -148,24 +151,33 @@ function App() {
     setDrawing(!drawing);
   }, [draw, drawing]);
 
-  const handleChangeSampleRate = useCallback((_, value) => {
+  const handleChangeSampleRate = useCallback(
+    (_, value) => {
       const num = Number(value);
 
       if (Number.isNaN(num)) return;
 
       draw.changeDelay(num);
       setSampleRate(num);
-    }, [draw]);
+    },
+    [draw],
+  );
 
-  const handleChangePenColor = useCallback(color => {
+  const handleChangePenColor = useCallback(
+    color => {
       draw.changePenColor(color.hex);
       setPenColor(color.hex);
-    }, [draw]);
+    },
+    [draw],
+  );
 
-  const handleDownload = useCallback(extension => e => {
+  const handleDownload = useCallback(
+    extension => e => {
       // console.log(draw.getSvgXML());
       draw.download(extension);
-    }, [draw]);
+    },
+    [draw],
+  );
 
   const handlePublish = useCallback(() => {
     draw.getDrawnPaths().map(sendPath);
