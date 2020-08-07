@@ -15,7 +15,7 @@ export default async function getOrCreatePeerId() {
     localStorage.setItem('peerId', JSON.stringify(peerId.toJSON()));
   }
 
-  console.info('Self is:', peerId.toB58String());
+  console.info('Self is:', peerId.toB58String().slice(0, 8));
 
   return peerId;
 }

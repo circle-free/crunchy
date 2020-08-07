@@ -7,7 +7,7 @@ const { Request } = protons(`
       UPDATE_PEER = 1;
       PATH_SYNC_REQUEST = 2;
       WALL_SYNC_REQUEST = 3;
-      WALL_CID = 4;
+      WALL = 4;
     }
 
     required Type type = 1;
@@ -15,7 +15,7 @@ const { Request } = protons(`
     optional UpdatePeer updatePeer = 3;
     optional PathSyncRequest pathSyncRequest = 4;
     optional WallSyncRequest wallSyncRequest = 5;
-    optional WallCid wallCid = 6;
+    optional Wall wall = 6;
   }
 
   message Path {
@@ -39,9 +39,11 @@ const { Request } = protons(`
     repeated bytes cids = 2;
   }
 
-  message WallCid {
+  message Wall {
     required bytes wallId = 1;
-    required bytes cid = 2;
+    required bytes creator = 2;
+    required bytes name = 3;
+    optional bytes cid = 4;
   }
 `);
 

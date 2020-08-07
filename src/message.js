@@ -8,24 +8,17 @@ class Message {
 
     switch (type) {
       case Request.Type.PATH:
-        this.path = data;
-
         this.payload = Request.encode({
           type,
-          path: {
-            wallId: data.wallId,
-            id: data.id,
-            data: data.data,
-            predecessorIds: data.predecessorIds,
-          },
+          path: data,
         });
 
         break;
       case Request.Type.UPDATE_PEER:
         this.payload = Request.encode({
-          type: Request.Type.UPDATE_PEER,
+          type,
           updatePeer: {
-            userHandle: Buffer.from(data),
+            userHandle: data,
           },
         });
 
@@ -33,30 +26,21 @@ class Message {
       case Request.Type.PATH_SYNC_REQUEST:
         this.payload = Request.encode({
           type,
-          pathSyncRequest: {
-            wallId: data.wallId,
-            ids: data.ids,
-          }
+          pathSyncRequest: data,
         });
 
         break;
       case Request.Type.WALL_SYNC_REQUEST:
         this.payload = Request.encode({
           type,
-          wallSyncRequest: {
-            wallIds: data.wallIds,
-            cids: data.cids,
-          }
+          wallSyncRequest: data,
         });
 
         break;
-      case Request.Type.WALL_CID:
+      case Request.Type.WALL:
         this.payload = Request.encode({
           type,
-          wallCid: {
-            wallId: data.wallId,
-            cid: data.cid,
-          }
+          wall: data,
         });
 
         break;
@@ -75,14 +59,13 @@ class Message {
 
       switch (request.type) {
         case Request.Type.PATH:
-          const { wallId, id, data, predecessorIds } = request.path;
           message.path = {
-            wallId: wallId.toString(),
-            id: id.toString(),
-            data: data.toString(),
-            predecessorIds: predecessorIds.map(id => id.toString()),
+            wallId: request.path.wallId.toString(),
+            id: request.path.id.toString(),
+            data: request.path.data.toString(),
+            predecessorIds: request.path.predecessorIds.map(id => id.toString()),
           };
-          
+
           break;
         case Request.Type.UPDATE_PEER:
           message.name = request.updatePeer.userHandle.toString();
@@ -98,9 +81,11 @@ class Message {
           message.ids = request.wallSyncRequest.ids.map(id => id.toString());
 
           break;
-        case Request.Type.WALL_CID:
-          message.wallId = request.wallCid.wallId.toString();
-          message.cid = request.wallCid.cid.toString();
+        case Request.Type.WALL:
+          message.wallId = request.wall.wallId.toString();
+          message.name = request.wall.name.toString();
+          message.creator = request.wall.creator.toString();
+          message.cid = request.wall.cid && request.wall.cid.toString();
 
           break;
         default:

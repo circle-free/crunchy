@@ -37,8 +37,8 @@ const { uuid } = require('uuidv4');
 
 const DAG_START = 'DAG_START';
 const MAX_PREDECESSORS = 3;
-const DAG_STORE_KEY = 'DAG_STORE_KEY';
 const DEFAULT_WALL_ID = 'DEFAULT_WALL_ID';
+const DEFAULT_WALL_NAME = 'Default';
 const GLOBAL_USER = 'GLOBAL_USER';
 
 const IPFS = require('ipfs');
@@ -121,21 +121,29 @@ class Node extends EventEmitter {
 
     this.wallDataStore = new LocalDatastore('graffitiWalls');
     this.nodeDataStore = new LocalDatastore('graffitiNode');
-    this.cidDataStore = new LocalDatastore('graffitiCids');
-
-    this.storeDebounceTimer = null;
 
     this.walls = {};
     this.currentWallId = null;
-  }
+    
+  } 
 
   async start() {
-    const defaultGraph = await this.wallDataStore
-      .has(DAG_STORE_KEY)
-      .then(hasStore => (hasStore ? this.wallDataStore.get(DEFAULT_WALL_ID) : null))
-      .then(sGraph => (sGraph ? jsonGraph.read(sGraph) : (new Graph({ directed: true })).setNode(DAG_START)));
+    const wallKeyValues = await this.wallDataStore.all();
+    let walls = [];
     
-    this.walls[DEFAULT_WALL_ID] = { graph: defaultGraph, user: GLOBAL_USER, cid: null };
+    wallKeyValues.forEach(({ key, value }) => {
+      const { name, creator, graph, cid } = value;
+      this.walls[key] = { name, creator, graph: jsonGraph.read(graph), cid };
+      walls.push({ wallId: key, name, creator });
+    });
+
+    if (!this.walls[DEFAULT_WALL_ID]) {
+      const graph = new Graph({ directed: true });
+      graph.setNode(DAG_START);
+      this.walls[DEFAULT_WALL_ID] = { name: DEFAULT_WALL_NAME, creator: GLOBAL_USER, graph };
+      walls.push({ wallId: DEFAULT_WALL_ID, name: DEFAULT_WALL_NAME, creator: GLOBAL_USER });
+    }
+
     this.currentWallId = DEFAULT_WALL_ID;
 
     this.peerId = await getOrCreatePeerId();
@@ -168,8 +176,8 @@ class Node extends EventEmitter {
           enabled: true,
           hop: {
             enabled: true,
-            active: true
-          }
+            active: true,
+          },
         },
         dht: {
           enabled: true,
@@ -178,10 +186,12 @@ class Node extends EventEmitter {
           },
         },
         pubsub: {
-          enabled: true
+          enabled: true,
         },
       },
     });
+
+    this.peerId = this.peerId.toB58String();  
 
     // Create gossip protocol manager here
     this.graffitiGossip = new GraffitiGossip(this.libp2p.pubsub);
@@ -202,8 +212,24 @@ class Node extends EventEmitter {
     });
 
     // Listen for cids from Gossip
-    this.graffitiGossip.on('cid', ({ from, wallId, cid }) => {
-      console.info(`${from} sent cid ${cid} for wall ${wallId}.`);
+    this.graffitiGossip.on('wall', async ({ from, wallId, name, creator, cid }) => {
+      // TODO: test who exactly from is, the gossiper or the source?
+      console.info(`Got wall ${name} (${wallId.slice(0, 8)}) by ${creator.slice(0, 8)}.`);
+  
+      if (!this.walls[wallId]) {
+        this.walls[wallId] = {
+          name,
+          creator,
+          graph: (new Graph({ directed: true })).setNode(DAG_START),
+          cid
+        };
+
+        this.emit('wall', { wallId, name, creator });
+
+        return;
+      };
+
+      this.walls[wallId].cid = cid;
     });
 
     // Create direct protocol manager here
@@ -213,7 +239,7 @@ class Node extends EventEmitter {
     this.graffitiDirect.on('path', ({ from, path }) => this.receivePath(from, path));
 
     // Handle graffiti direct communication requests from peers
-    const getMissingPaths = (wallId, ids) => this.walls[wallId] ? getPathsNotInList(this.walls[wallId].graph, ids) : [];
+    const getMissingPaths = (wallId, ids) => (this.walls[wallId] ? getPathsNotInList(this.walls[wallId].graph, ids) : []);
 
     this.libp2p.handle(this.graffitiDirect.PROTOCOL, this.graffitiDirect.handleWith(getMissingPaths));
 
@@ -237,32 +263,30 @@ class Node extends EventEmitter {
 
     console.info('Started IPFS client Version:', version.version);
 
-    return getOrderedPaths(defaultGraph);
-  }
-
-  // TODO: implement
-  async setWallId() {
-
+    return {
+      walls,
+      paths: getOrderedPaths(this.walls[this.currentWallId].graph),
+    };
   }
 
   async receivePath(from, path) {
     const { wallId, id, data, predecessorIds = [] } = path;
 
-    if (wallId !== this.currentWallId) return;
+    // TODO: if you get a path for a wall you have never heard about, either ignore or sync
+    if (!this.walls[wallId]) return
 
-    if (this.storeDebounceTimer) {
-      clearTimeout(this.storeDebounceTimer);
-    }
+    clearTimeout(this.walls[wallId].saveTimer);
 
-    // TODO: this can get overwritten if wall currentWallId is not same as last receive wallId path
-    this.storeDebounceTimer = setTimeout(() => this.savePathsToLocal(wallId), 5000);
-
-    const isMine = from === this.libp2p.peerId.toB58String();
-    console.info(`Received path ${id} from ${isMine ? 'self' : from} with ${predecessorIds.length} predecessors.`);
-
-    // TODO: validate here
+    // TODO: validate here (like checking fr DAG being cycle if the path is added)
     // TODO: do something with unknownIds (prune?, ignore?, fetch?)
     const { predIds } = addTheirPathToGraph(this.walls[this.currentWallId].graph, { id, data, predecessorIds });
+
+    this.walls[wallId].saveTimer = setTimeout(() => this.saveWallToLocal(wallId), 5000);
+
+    const isMine = from === this.peerId;
+    console.info(`Received path ${id} from ${isMine ? 'self' : from.slice(0, 8)} with ${predecessorIds.length} predecessors.`);
+
+    if (wallId !== this.currentWallId) return;
 
     this.emit('path', { id, data, predecessorIds: predIds });
   }
@@ -289,67 +313,126 @@ class Node extends EventEmitter {
     }
   }
 
-  async savePathsToLocal(wallId) {
-    if (!this.walls[wallId]) return;
+  async saveWallToLocal(wallId) {
+    const wall = this.walls[wallId];
 
-    console.info('Saving DAG to data store.');
-    return this.wallDataStore.put(wallId, jsonGraph.write(this.walls[wallId].graph));
+    if (!wall) return;
+
+    const { name, creator, graph, cid } = wall;
+    const sGraph = jsonGraph.write(graph);
+
+    console.info(`Saving wall ${name} (${wallId.slice(0, 8)}) to local store.`);
+    await this.wallDataStore.put(wallId, { name, creator, graph: sGraph, cid });
+
+    return true;
   }
 
-  async loadPathsFromIpfs(wallId) {
-    console.info(`Loading wall ${wallId} from IPFS.`);
+  async loadWallFromLocal(wallId) {
+    console.info(`Loading wall ${wallId.slice(0, 8)} from local store.`);
 
-    const cidString = await this.cidDataStore.get(wallId);
-    const serializedGraph = Buffer.concat(await all(this.ipfsNode.cat(cidString))).toString();
-    const graph = jsonGraph.read(JSON.parse(serializedGraph));
-    this.walls[wallId].graph = graph;
+    const wall = await this.wallDataStore.get(DEFAULT_WALL_ID);
 
-    console.info(`Loaded wall ${wallId} from IPFS. Had ${graph.nodeCount() - 1} paths.`);
+    if (!wall) return false;
+
+    const { name, creator, graph: sGraph } = wall;
+    const graph = jsonGraph.read(sGraph);
+
+    this.walls[wallId] = { wallId, name, creator, graph };
+
+    return true;
   }
 
-  async deletePathsFromIpfs(wallId) {
-    console.info(`Removing wall ${wallId} from IPFS.`);
+  async saveWallToIpfs(wallId) {
+    console.info(`Saving wall ${wallId.slice(0, 8)} to IPFS.`);
 
-    await this.ipfsNode.files.rm(`/myGraphitiWalls/${wallId}`);
-    await this.cidDataStore.delete(wallId);
+    if (!this.walls[wallId]) return false;
 
-    console.info(`Removing wall ${wallId} from IPFS.`);
-  }
+    const { name, creator, graph } = this.walls[wallId];
+    const sGraph = jsonGraph.write(graph);
+    const stringWall = JSON.stringify({ name, creator, graph: sGraph });
 
-  async savePathsToIpfs(wallId) {
-    console.info(`Saving wall ${wallId} to IPFS.`);
-
-    const graph = this.walls[wallId] ? this.walls[wallId].graph : await this.wallDataStore.get(wallId);
-
-    if (!graph) return;
-
-    const serializedGraph = JSON.stringify(jsonGraph.write(graph));
-    await this.ipfsNode.files.write(`/myGraphitiWalls/${wallId}`, Buffer.from(serializedGraph), { mode: 744, create: true, parents: true });
+    await this.ipfsNode.files.write(`/myGraphitiWalls/${wallId}`, Buffer.from(stringWall), { mode: 744, create: true, parents: true });
 
     // TODO: what the hell is flush really though?
     const cid = await this.ipfsNode.files.flush(`/myGraphitiWalls/${wallId}`);
     const cidString = cid.toString();
-    await this.cidDataStore.put(wallId, cidString);
+    this.walls[wallId].cid = cidString;
 
-    console.info(`Saved graphiti DAG as ${cidString} to IPFS.`);
+    console.info(`Saved graphiti DAG as ${cidString.slice(0, 8)} to IPFS.`);
 
     console.info('Broadcasting IPFS CID.');
-    await this.graffitiGossip.sendCid({ wallId, cid });
+    // TODO: creator of wall needs to be had somehow
+    await this.graffitiGossip.sendCid({ wallId, cidString });
     console.info('IPFS CID broadcasted.');
 
-    if (this.walls[wallId]) this.walls[wallId].cid = cidString;
+    return true;
+  }
+
+  async loadWallFromIpfs(wallId) {
+    console.info(`Loading wall ${wallId.slice(0, 8)} from IPFS.`);
+
+    if (!this.walls[wallId]) return false;
+
+    const cidString = this.walls[wallId].cid;
+
+    if (!cidString) return false;
+
+    const stringWall = Buffer.concat(await all(this.ipfsNode.cat(cidString))).toString();
+    const { name, creator, graph: sGraph } = JSON.parse(stringWall);
+    const graph = jsonGraph.read(JSON.parse(sGraph));
+
+    this.walls[wallId].graph = graph;
+    this.walls[wallId].name = name;
+    this.walls[wallId].creator = creator;
+
+    console.info(`Loaded wall ${wallId.slice(0, 8)} from IPFS. Had ${graph.nodeCount() - 1} paths.`);
+
+    return true;
+  }
+
+  async deleteWallFromIpfs(wallId) {
+    console.info(`Removing wall ${wallId.slice(0, 8)} from IPFS.`);
+
+    // TODO: check needed here if file exists ipfs
+
+    await this.ipfsNode.files.rm(`/myGraphitiWalls/${wallId}`);
+
+    console.info(`Removed wall ${wallId.slice(0, 8)} from IPFS.`);
+
+    const localWall = await this.wallDataStore.get(wallId);
+
+    if (!localWall) return true;
+
+    localWall.cid = undefined;
+    await this.wallDataStore.put(wallId, localWall);
+
+    return true;
   }
 
   async createWall(name) {
-    const id = uuid();
-    const user = this.peerId;
+    const wallId = uuid();
+    const creator = this.peerId;
+    const graph = new Graph({ directed: true }).setNode(DAG_START);
+    this.walls[wallId] = { name, creator, graph };
 
+    await this.graffitiGossip.sendWall({ wallId, name, creator });
 
-    
-    // this.graph = (new Graph({ directed: true })).setNode(DAG_START)
+    await this.setWall(wallId);
 
+    return true;
+  }
 
-    return { id, name, user };
+  async setWall(wallId) {
+    await this.saveWallToLocal(this.currentWallId);
+
+    if (this.walls[wallId] || (await this.loadWallFromLocal(wallId)) || (await this.loadWallFromIpfs(wallId))) {
+      this.currentWallId = wallId;
+      console.log(`Current wall is ${this.walls[this.currentWallId].name}`)
+
+      return getOrderedPaths(this.walls[wallId].graph);
+    }
+
+    return null;
   }
 }
 

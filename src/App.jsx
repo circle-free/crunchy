@@ -31,7 +31,6 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 
 import './App.css';
-
 import Node from './p2p-node';
 
 const size = 30;
@@ -87,13 +86,14 @@ function App() {
   // Drawer and Walls
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [walls, setWalls] = useState([{ id: '0', name: 'Default', user: 'Global' }, { id: '1', name: 'Cool Wall', user: 'Mike' }]);
+  const [walls, setWalls] = useState([]);
+  const [customName, setCustomName] = useState(null);
 
   // Node
   const [node, setNode] = useState(null);
   // const [started, setStarted] = useState(false);
   // const [syncing, setSyncing] = useState(false);
-  
+
   const handleSendPath = useCallback(
     async svgPath => {
       if (!svgPath || !node) return;
@@ -108,26 +108,48 @@ function App() {
     setDrawerOpen(!drawerOpen);
   }, [setDrawerOpen, drawerOpen]);
 
-  const handleWallSelect = useCallback(id => {
-    console.log(`Wall ${1} clicked.`);
-    setDrawerOpen(!drawerOpen);
-  }, [setDrawerOpen, drawerOpen]);
+  const handleWallSelect = useCallback(
+    async wallId => {
+      console.log(`Wall ${wallId.slice(0, 8)} clicked.`);
+      setDrawerOpen(!drawerOpen);
 
-  const handleCreateWall = useCallback(id => {
-    console.log(`Wall create clicked.`);
-    setCreateOpen(!createOpen);
-  }, [setCreateOpen, createOpen]);
+      if (!node) return;
+
+      const paths = await node.setWall(wallId);
+
+      if (!paths) return;
+
+      draw.clear();
+      draw.insertPaths(paths.map(({ data }) => data));
+    },
+    [setDrawerOpen, drawerOpen, draw, node],
+  );
+
+  const handleCreateWall = useCallback(
+    () => {
+      console.log(`Wall create clicked.`);
+      setCreateOpen(!createOpen);
+    },
+    [setCreateOpen, createOpen],
+  );
 
   const handleCreateClose = useCallback(() => {
     console.log(`Wall create canceled.`);
     setCreateOpen(!createOpen);
   }, [setCreateOpen, createOpen]);
 
-  const handleCreateConfirm = useCallback(() => {
+  const handleCreateConfirm = useCallback(async () => {
+    if (!node) return;
+
     console.log(`Wall create confirmed.`);
+
+    if(!await node.createWall(customName)) return;
+
+    draw.clear();
+    
     setDrawerOpen(!drawerOpen);
     setCreateOpen(!createOpen);
-  }, [setDrawerOpen, drawerOpen, setCreateOpen, createOpen]);
+  }, [setDrawerOpen, drawerOpen, setCreateOpen, createOpen, draw, node, customName]);
 
   // Draw
   useEffect(() => {
@@ -155,25 +177,27 @@ function App() {
 
     // Subscribe to events
     p2pNode.on('path', ({ id, data, predecessorIds }) => {
-      console.info(`Inserting ${id} above ${predecessorIds.join(' ')}`);
+      console.info(`Inserting path ${id.slice(0, 8)} above ${predecessorIds.map(p => p.slice(0, 8)).join(' ')}`);
       draw.insertPathAbove(data, predecessorIds);
       console.log('Path inserted.');
     });
 
-    p2pNode.start().then(paths => {
-      console.info(`P2P node instance started. ${paths.length} paths loaded.`);
+    p2pNode.on('wall', ({ wallId, name, creator }) => {
+      console.info(`Adding wall ${name} (${wallId.slice(0, 8)})`);
+      setWalls(walls.concat([{ wallId, name, creator }]));
+    });
+
+    p2pNode.start().then(({ walls, paths }) => {
+      console.info(`P2P node instance started.`);
+      setWalls(walls);
       draw.insertPaths(paths.map(({ data }) => data));
     });
-  }, [node, draw]);
+  }, [node, draw, setWalls, walls]);
 
   // Draw logic start
   const handleToggleGrid = useCallback(() => {
     setGrid(!grid);
   }, [grid]);
-
-  // const handleClear = useCallback(() => {
-  //   draw.clear();
-  // }, [draw]);
 
   const handleUndo = useCallback(() => {
     draw.undo();
@@ -221,13 +245,13 @@ function App() {
     [draw],
   );
 
-  // const handleDownload = useCallback(
-  //   extension => e => {
-  //     // console.log(draw.getSvgXML());
-  //     draw.download(extension);
-  //   },
-  //   [draw],
-  // );
+  const handleDownload = useCallback(
+    extension => e => {
+      // console.log(draw.getSvgXML());
+      draw.download(extension);
+    },
+    [draw],
+  );
 
   const handlePublish = useCallback(() => {
     draw.getDrawnPaths().map(handleSendPath);
@@ -239,6 +263,10 @@ function App() {
     setAutoSync(!autoSync);
   }, [autoSync, handlePublish]);
   // Draw logic end
+
+  const handleChangeCustomName = useCallback(e => {
+    setCustomName(e.target.value);
+  }, [setCustomName]);
 
   return (
     <Fragment>
@@ -252,18 +280,15 @@ function App() {
 
       <div className="options">
         <div className="canvas-buttons">
-          {/* <IconButton color="secondary" onClick={handleClear}>
-            <ClearIcon />
-          </IconButton> */}
           <IconButton color="secondary" onClick={handleDrawerToggle}>
             <MenuIcon />
           </IconButton>
+          <Button color="secondary" size="small" onClick={handleDownload('svg')}>
+            SVG
+          </Button>
           <IconButton color="secondary" onClick={handleUndo}>
             <UndoIcon />
           </IconButton>
-          {/* <IconButton color="secondary" onClick={handlePublish}>
-            <PublishIcon />
-          </IconButton> */}
           <IconButton color="secondary" onClick={handleToggleSmoothing}>
             {smoothing ? <GestureIcon /> : <ShowChartIcon />}
           </IconButton>
@@ -273,8 +298,6 @@ function App() {
           <IconButton color="secondary" onClick={handleToggleDraw}>
             {drawing ? <BrushIcon /> : <PanToolIcon />}
           </IconButton>
-          {/* <Button color="secondary" size="small" onClick={handleDownload('png')}>PNG</Button> */}
-          {/* <Button color="secondary" size="small" onClick={handleDownload('svg')}>SVG</Button> */}
           <IconButton color="secondary" onClick={handleToggleSync}>
             {autoSync ? <SyncIcon /> : <PublishIcon />}
           </IconButton>
@@ -308,17 +331,23 @@ function App() {
       <Dialog fullScreen open={drawerOpen} onClose={handleDrawerToggle}>
         <AppBar className="appBar" color="secondary">
           <Toolbar>
-            <IconButton edge="start" onClick={handleDrawerToggle}><CloseIcon /></IconButton>
-            <Typography variant="h6" className="title" align="center">Walls</Typography>
-            <Button autoFocus color="inherit" onClick={handleCreateWall}>Create</Button>
+            <IconButton edge="start" onClick={handleDrawerToggle}>
+              <CloseIcon />
+            </IconButton>
+            <Typography variant="h6" className="title" align="center">
+              Walls
+            </Typography>
+            <Button autoFocus color="inherit" onClick={handleCreateWall}>
+              Create
+            </Button>
           </Toolbar>
         </AppBar>
         <Toolbar></Toolbar>
         <List>
-          {walls.map(({ id, name, user }) => (
-            <Fragment key={id}>
-              <ListItem button onClick={() => handleWallSelect(id)}>
-                <ListItemText primary={name} secondary={user} />
+          {walls.map(({ wallId, name, creator }) => (
+            <Fragment key={wallId}>
+              <ListItem button onClick={() => handleWallSelect(wallId)}>
+                <ListItemText primary={name} secondary={creator} />
               </ListItem>
               <Divider />
             </Fragment>
@@ -329,11 +358,23 @@ function App() {
       <Dialog open={createOpen} onClose={handleCreateClose}>
         <DialogTitle>Give Your Wall A Name</DialogTitle>
         <DialogContent>
-          <TextField autoFocus margin="dense" id="name" label="Wall Name" fullWidth color="secondary"/>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="name"
+            label="Wall Name"
+            fullWidth
+            color="secondary"
+            onChange={handleChangeCustomName}
+          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCreateClose} color="secondary">Cancel</Button>
-          <Button onClick={handleCreateConfirm} color="secondary">Create</Button>
+          <Button onClick={handleCreateClose} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleCreateConfirm} color="secondary">
+            Create
+          </Button>
         </DialogActions>
       </Dialog>
     </Fragment>

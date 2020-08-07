@@ -33,8 +33,8 @@ class PubSub extends EventEmitter {
           return;
         }
 
-        if (message.type === MessageType.GRAPH_CID) {
-          this.emit('cid', { from: message.from, wallId: message.wallId, cid: message.cid });
+        if (message.type === MessageType.WALL) {
+          this.emit('wall', { ...message });
           return;
         }
       } catch (err) {
@@ -67,8 +67,9 @@ class PubSub extends EventEmitter {
     }
   }
 
-  async sendCid({ wallId, cid }) {
-    const { payload } = new Message(MessageType.GRAPH_CID, { wallId, cid });
+  async sendWall({ wallId, name, creator, cid }) {
+    console.log({ wallId, name, creator, cid })
+    const { payload } = new Message(MessageType.WALL, { wallId, name, creator, cid });
 
     try {
       await this.pubsub.publish(this.TOPIC, payload);
