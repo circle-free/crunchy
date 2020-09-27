@@ -249,8 +249,10 @@ function App() {
     extension => e => {
       // console.log(draw.getSvgXML());
       draw.download(extension);
+
+      // node.saveWallToIpfs('DEFAULT_WALL_ID');
     },
-    [draw],
+    [draw, node],
   );
 
   const handlePublish = useCallback(() => {

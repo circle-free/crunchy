@@ -358,11 +358,11 @@ class Node extends EventEmitter {
     const cidString = cid.toString();
     this.walls[wallId].cid = cidString;
 
-    console.info(`Saved graphiti DAG as ${cidString.slice(0, 8)} to IPFS.`);
+    console.info(`Saved graphiti DAG as ${cidString.slice(0, 8)} to IPFS as ${cidString}.`);
 
     console.info('Broadcasting IPFS CID.');
     // TODO: creator of wall needs to be had somehow
-    await this.graffitiGossip.sendCid({ wallId, cidString });
+    // await this.graffitiGossip.sendWall({ wallId, cidString });
     console.info('IPFS CID broadcasted.');
 
     return true;
