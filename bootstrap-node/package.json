@@ -9,7 +9,7 @@
   "author": "circle-free",
   "license": "ISC",
   "dependencies": {
-    "libp2p": "^0.28.9",
+    "libp2p": "^0.38.0",
     "libp2p-gossipsub": "^0.4.6",
     "libp2p-kad-dht": "^0.19.9",
     "libp2p-mdns": "^0.14.2",
